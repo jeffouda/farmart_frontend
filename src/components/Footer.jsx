@@ -109,24 +109,11 @@ const Footer = () => {
           <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest italic">
             &copy; {currentYear} FarmArt • Engineered for the Modern Rancher
           </p>
-          <div className="flex gap-8">
-            <span className="text-slate-600 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              Status: Marketplace Online
-            </span>
-            <span className="text-slate-600 text-[10px] font-black uppercase tracking-[0.2em]">
-              v3.1.0
-            </span>
-          </div>
+         
         </div>
       </div>
 
-      {/* BIG BACKGROUND TEXT DECORATION */}
-      <div className="absolute bottom-0 right-0 translate-y-1/2 translate-x-1/4 select-none pointer-events-none">
-        <h2 className="text-[200px] font-black text-white/[0.02] leading-none uppercase italic tracking-tighter">
-          ART
-        </h2>
-      </div>
+      
     </footer>
   );
 };
