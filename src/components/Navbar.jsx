@@ -28,6 +28,13 @@ function Navbar() {
               }`}>
               FARM<span className="text-indigo-500">ART</span>
             </h1>
+             <p
+              className={`text-[10px] font-black uppercase tracking-[0.2em] mt-1 transition-colors ${
+                isScrolled ? "text-slate-400" : "text-white/60"
+              }`}>
+              Buy • Sell
+            </p>
+          </div>
 
     );
 }
