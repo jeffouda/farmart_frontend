@@ -11,7 +11,7 @@ function Header() {
   const handleSellClick = (e) => {
     if (!isAuthenticated) {
       e.preventDefault();
-      navigate("/auth");
+      navigate("/auth", { state: { role: 'farmer' } });
     }
   };
   return (

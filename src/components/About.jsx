@@ -80,6 +80,7 @@ const About = () => {
 
             <Link
               to="/auth"
+              state={{ role: 'farmer' }}
               className="group flex items-center gap-3 px-10 py-5 bg-green-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-green-500 transition-all shadow-xl active:scale-95">
               Get Started Now
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
