@@ -1,17 +1,14 @@
-import { useState } from 'react'
-import Navbar from './components/Navbar'
-import Header from './components/Header'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import SignUp from './pages/SignUp';
 
 function App() {
-  
-
   return (
-    <>
-    <Navbar />
-    <Header />
-   
-    </>
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<SignUp />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
