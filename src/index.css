@@ -1,10 +1,7 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-/* Custom tweaks to make sure it looks good immediately */
-@layer base {
-  body {
-    @apply bg-slate-50 text-slate-900;
-  }
-}
+    /* Define custom themes and styles using @theme */
+    @theme {
+      --color-primary: #ff0000;
+      --font-family-sans: Inter, sans-serif;
+    }
