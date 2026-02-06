@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Search, Heart, MapPin, Filter, Star } from "lucide-react";
 
 // Mock Data - Kenyan Livestock Listings
@@ -345,9 +346,11 @@ function Marketplace() {
                     </div>
 
                     {/* View Details Button */}
-                    <button className="w-full py-3 bg-gradient-to-r from-orange-400 to-yellow-400 text-white font-black uppercase text-xs tracking-wider rounded-xl hover:from-orange-500 hover:to-yellow-500 transition-all active:scale-95">
+                    <Link
+                      to="/livestock/1"
+                      className="block w-full py-3 text-center bg-gradient-to-r from-orange-400 to-yellow-400 text-white font-black uppercase text-xs tracking-wider rounded-xl hover:from-orange-500 hover:to-yellow-500 transition-all active:scale-95">
                       View Details
-                    </button>
+                    </Link>
                   </div>
                 </div>
               ))}
