@@ -1,14 +1,16 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import SignUp from './pages/SignUp';
+import { useState } from 'react'
+import Home from './pages/Home'
+
 
 function App() {
+  
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<SignUp />} />
-      </Routes>
-    </BrowserRouter>
-  );
+    <>
+   <Home />
+   
+    </>
+  )
 }
 
-export default App;
+export default App
