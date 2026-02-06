@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Tractor, MapPin, Phone, ShoppingBag, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const KENYAN_COUNTIES = [
   "Mombasa", "Kwale", "Kilifi", "Tana River", "Lamu", "Taita/Taveta",
@@ -14,6 +15,8 @@ const KENYAN_COUNTIES = [
 ];
 
 const SignUp = () => {
+  const { login, register } = useAuth();
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(false);
   const [role, setRole] = useState('farmer');
   const [isLoading, setIsLoading] = useState(false);
@@ -64,26 +67,36 @@ const SignUp = () => {
       return;
     }
 
-    const endpoint = isLogin 
-      ? 'http://localhost:5000/api/auth/login'
-      : 'http://localhost:5000/api/auth/register';
-
-    const payload = isLogin
-      ? { email: formData.email, password: formData.password }
-      : { ...formData, role };
-
     try {
-      const response = await axios.post(endpoint, payload);
-      if (response.data.access_token) {
-        localStorage.setItem('access_token', response.data.access_token);
+      let result;
+      
+      if (isLogin) {
+        // Use context login function
+        result = await login(formData.email, formData.password);
+      } else {
+        // Use context register function with role
+        result = await register({ ...formData, role });
       }
-      setMessage({ 
-        type: 'success', 
-        text: isLogin ? 'Welcome back! Login successful.' : 'Welcome to Farmart! Account created.' 
-      });
+
+      if (result.success) {
+        setMessage({ 
+          type: 'success', 
+          text: isLogin ? 'Welcome back! Login successful.' : 'Welcome to Farmart! Account created.' 
+        });
+        
+        // Role-based redirection after 1.5 seconds
+        setTimeout(() => {
+          if (role === 'buyer') {
+            navigate('/dashboard');
+          } else if (role === 'farmer') {
+            navigate('/farmer-dashboard');
+          }
+        }, 1500);
+      } else {
+        setMessage({ type: 'error', text: result.error });
+      }
     } catch (error) {
-      const errorMsg = error.response?.data?.error || 'Connection failed. Please try again.';
-      setMessage({ type: 'error', text: errorMsg });
+      setMessage({ type: 'error', text: 'Connection failed. Please try again.' });
     } finally {
       setIsLoading(false);
     }

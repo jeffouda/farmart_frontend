@@ -4,6 +4,8 @@ import SignUp from './pages/SignUp'
 import BrowseLivestock from './pages/BrowseLivestock'
 import Marketplace from './pages/Marketplace'
 import LivestockDetail from './pages/LivestockDetail'
+import BuyerDashboard from './pages/BuyerDashboard'
+import FarmerDashboard from './pages/FarmerDashboard'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 
@@ -17,6 +19,8 @@ function App() {
         <Route path="/browse" element={<BrowseLivestock />} />
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/livestock/:id" element={<LivestockDetail />} />
+        <Route path="/dashboard" element={<BuyerDashboard />} />
+        <Route path="/farmer-dashboard" element={<FarmerDashboard />} />
       </Routes>
       <Footer />
     </>
