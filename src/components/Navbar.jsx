@@ -35,38 +35,28 @@ function Navbar() {
           ? "bg-green-950/95 backdrop-blur-md py-3 shadow-2xl border-b border-green-900/50"
           : "bg-white/10 backdrop-blur-md py-6" // Subtle glass effect for visibility over background images
       }`}>
-      
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-12">
-  {/* LEFT: BRANDING */}
-  <Link to="/" className="flex items-center gap-3 group">
-    {/* Container Styling: 
-        - Added 'bg-white' to provide a clean canvas for the Noto Cow colors
-        - Added a slight rotation on hover for a playful 'livestock' feel
-    */}
-    <div className="relative flex items-center justify-center w-12 h-12 bg-white rounded-xl transition-all group-hover:scale-110 group-hover:rotate-3 duration-500 shadow-lg shadow-green-900/20">
-      
-      {/* The Noto Cow Icon */}
-      <Icon icon="noto:cow" className="w-9 h-9" />
-      
-      {/* Subtle Ping Animation to draw eye to the logo */}
-      <span className="absolute -top-1 -right-1 flex h-3 w-3">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-      </span>
-    </div>
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-12">
+        {/* LEFT: BRANDING */}
+        <Link to="/" className="flex items-center gap-3 group">
+          {/* White container as seen in your screenshot */}
+          <div className="relative flex items-center justify-center w-12 h-12 bg-white rounded-xl shadow-lg">
+            <Icon icon="noto:cow" className="w-9 h-9" />
 
-    <div className="leading-none">
-      <h1
-        className={`text-2xl font-black uppercase italic tracking-tighter transition-colors duration-500 ${textColor}`}
-      >
-        FARM<span className="text-green-600">ART</span>
-      </h1>
-      <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-green-600">
-        Livestock Exchange
-      </p>
-    </div>
-  </Link>
-  
+            {/* The Green Notification Dot from your image */}
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500 border-2 border-white"></span>
+            </span>
+          </div>
+
+          <div className="leading-none">
+            <h1 className="text-2xl font-black uppercase italic tracking-tighter text-slate-900">
+              FARM<span className="text-green-600">ART</span>
+            </h1>
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-green-600">
+              Livestock Exchange
+            </p>
+          </div>
+        </Link>
 
         {/* CENTER: DESKTOP NAVIGATION */}
         <div className="hidden lg:flex items-center gap-10">
