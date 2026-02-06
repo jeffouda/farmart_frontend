@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X, Beef, ShoppingCart } from "lucide-react";
+import { Menu, X, ShoppingCart } from "lucide-react";
+import { Icon } from "@iconify/react"; // Fixed: Added missing import
 
 function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -21,33 +22,51 @@ function Navbar() {
     { name: "About Us", path: "/about" },
   ];
 
-  // Dynamic colors based on scroll state
+  // Dynamic colors based on scroll state for visibility
   const textColor = isScrolled ? "text-white" : "text-slate-900";
-  const hoverColor = "hover:text-green-600";
+  const hoverColor = isScrolled
+    ? "hover:text-green-400"
+    : "hover:text-green-600";
 
   return (
     <nav
       className={`fixed top-0 left-0 w-full z-[100] transition-all duration-500 ${
         isScrolled
           ? "bg-green-950/95 backdrop-blur-md py-3 shadow-2xl border-b border-green-900/50"
-          : "bg-transparent py-6"
+          : "bg-white/10 backdrop-blur-md py-6" // Subtle glass effect for visibility over background images
       }`}>
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-12">
-        {/* LEFT: BRANDING */}
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="relative flex items-center justify-center w-12 h-12 bg-green-600 rounded-xl transition-transform group-hover:scale-110 duration-500 shadow-lg shadow-green-900/20">
-            <Beef className="text-white w-7 h-7" />
-          </div>
-          <div className="leading-none">
-            <h1
-              className={`text-2xl font-black uppercase italic tracking-tighter transition-colors duration-500 ${textColor}`}>
-              FARM<span className="text-green-600">ART</span>
-            </h1>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-green-600">
-              Livestock Exchange
-            </p>
-          </div>
-        </Link>
+      
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-12">
+  {/* LEFT: BRANDING */}
+  <Link to="/" className="flex items-center gap-3 group">
+    {/* Container Styling: 
+        - Added 'bg-white' to provide a clean canvas for the Noto Cow colors
+        - Added a slight rotation on hover for a playful 'livestock' feel
+    */}
+    <div className="relative flex items-center justify-center w-12 h-12 bg-white rounded-xl transition-all group-hover:scale-110 group-hover:rotate-3 duration-500 shadow-lg shadow-green-900/20">
+      
+      {/* The Noto Cow Icon */}
+      <Icon icon="noto:cow" className="w-9 h-9" />
+      
+      {/* Subtle Ping Animation to draw eye to the logo */}
+      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+      </span>
+    </div>
+
+    <div className="leading-none">
+      <h1
+        className={`text-2xl font-black uppercase italic tracking-tighter transition-colors duration-500 ${textColor}`}
+      >
+        FARM<span className="text-green-600">ART</span>
+      </h1>
+      <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-green-600">
+        Livestock Exchange
+      </p>
+    </div>
+  </Link>
+  
 
         {/* CENTER: DESKTOP NAVIGATION */}
         <div className="hidden lg:flex items-center gap-10">

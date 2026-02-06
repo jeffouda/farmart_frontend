@@ -1,10 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* Custom tweaks to make sure it looks good immediately */
+@theme {
+  /* This replaces the 'extend' section of your old config */
+  --color-primary: #16a34a; 
+  
+  /* You can add more Farmart specific variables here */
+  --color-brand-dark: #020617;
+  --color-brand-light: #f0fdf4;
+}
+
+/* Global styles for visibility */
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
   body {
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-white text-slate-900;
   }
 }
