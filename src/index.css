@@ -1,7 +1,20 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
-    /* Define custom themes and styles using @theme */
-    @theme {
-      --color-primary: #ff0000;
-      --font-family-sans: Inter, sans-serif;
-    }
+@theme {
+  /* This replaces the 'extend' section of your old config */
+  --color-primary: #16a34a; 
+  
+  /* You can add more Farmart specific variables here */
+  --color-brand-dark: #020617;
+  --color-brand-light: #f0fdf4;
+}
+
+/* Global styles for visibility */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-white text-slate-900;
+  }
+}
