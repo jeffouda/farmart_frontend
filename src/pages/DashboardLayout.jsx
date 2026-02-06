@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 
 const FarmerDashboard = () => {
-  // State to control the visibility of the sidebar on mobile
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
 
@@ -23,57 +22,47 @@ const FarmerDashboard = () => {
     { name: "Analytic", path: "/farmer-dashboard/analytics", icon: BarChart3 },
   ];
 
-  // Helper to toggle the sidebar
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
-      {/* 1. MOBILE TOP BAR (Hidden on Desktop) */}
+      {/* Mobile Header - Only shows on small screens */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 px-4 flex items-center justify-between z-50">
-        <span className="font-black text-[#34A832] text-xl">FARMART</span>
+        <span className="font-black text-[#34A832] text-xl">Farmart</span>
         <button
-          onClick={toggleSidebar}
-          className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-          aria-label="Toggle Menu">
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
           {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
-      {/* 2. SIDEBAR OVERLAY (Mobile only) */}
+      {/* Sidebar Overlay (Mobile) */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
-          onClick={toggleSidebar}
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
+          onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      {/* 3. SIDEBAR (Fixed/Drawer Logic) */}
+      {/* Sidebar - Matching image_d70257.png */}
       <aside
         className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 p-6 flex flex-col transition-transform duration-300 ease-in-out
+        fixed top-0 left-0 h-full w-64 bg-white border-r border-slate-200 p-6 flex flex-col z-50 transition-transform duration-300 ease-in-out
         ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} 
-        lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen
+        lg:translate-x-0 lg:sticky lg:top-0
       `}>
-        {/* Sidebar Header */}
-        <div className="mb-10 px-2 hidden lg:block">
-          <span className="font-black text-[#34A832] text-2xl tracking-tighter">
-            FARMART
+        <div className="hidden lg:block mb-8">
+          <span className="font-black text-[#34A832] text-2xl px-4">
+            Farmart
           </span>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
-            Livestock Exchange
-          </p>
         </div>
 
-        {/* Add Button - Matching your image */}
         <Link
           to="/farmer-dashboard/add"
           onClick={() => setIsSidebarOpen(false)}
-          className="flex items-center justify-center gap-2 bg-[#34A832] hover:bg-[#2D8E2B] text-white py-3 rounded-xl font-bold mb-8 shadow-md transition-all active:scale-95">
+          className="flex items-center justify-center gap-2 bg-[#34A832] hover:bg-[#2D8E2B] text-white py-3 rounded-lg font-bold mb-10 shadow-sm transition-all">
           <Plus size={18} /> Add Livestock
         </Link>
 
-        {/* Navigation Links */}
-        <nav className="flex-1 space-y-1">
+        <nav className="flex-1 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -81,7 +70,7 @@ const FarmerDashboard = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                onClick={() => setIsSidebarOpen(false)} // Close menu on click (mobile)
+                onClick={() => setIsSidebarOpen(false)}
                 className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all ${
                   isActive
                     ? "bg-slate-50 text-slate-900 font-bold"
@@ -97,16 +86,15 @@ const FarmerDashboard = () => {
           })}
         </nav>
 
-        {/* Logout Button */}
-        <button className="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-red-500 mt-auto font-bold transition-colors">
-          <LogOut size={22} /> Logout
+        <button className="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-red-500 mt-auto transition-colors">
+          <LogOut size={22} />
+          <span className="text-[15px]">Logout</span>
         </button>
       </aside>
 
-      {/* 4. MAIN CONTENT AREA */}
-      <main className="flex-1 w-full overflow-x-hidden pt-20 lg:pt-0">
-        <div className="p-4 md:p-8 max-w-7xl mx-auto">
-          {/* Sub-pages (Overview, Orders, etc.) render here */}
+      {/* Main Content Area */}
+      <main className="flex-1 p-4 md:p-8 pt-20 lg:pt-8 w-full overflow-x-hidden">
+        <div className="max-w-6xl mx-auto">
           <Outlet />
         </div>
       </main>
