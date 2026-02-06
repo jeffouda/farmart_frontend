@@ -94,11 +94,11 @@ function Navbar() {
           </Link>
 
           <Link
-            to="/signup"
+            to="/auth"
             className={`hidden sm:block px-7 py-3 text-[10px] font-black uppercase tracking-widest transition-all rounded-lg shadow-lg ${
               isScrolled
                 ? "bg-green-600 text-white hover:bg-green-500 shadow-green-950/40"
-                : "bg-slate-900 text-white hover:bg-green-600 shadow-slate-900/20"
+                : "bg-green-600 text-white hover:bg-green-500 shadow-slate-900/20"
             } hover:-translate-y-0.5 active:scale-95`}>
             Get Started
           </Link>
@@ -129,7 +129,7 @@ function Navbar() {
           ))}
           <hr className="border-green-800/30" />
           <Link
-            to="/signup"
+            to="/auth"
             onClick={() => setIsMobileMenuOpen(false)}
             className="w-full py-4 text-center text-[10px] font-black uppercase tracking-widest text-white bg-green-600 rounded-lg shadow-lg">
             Get Started
