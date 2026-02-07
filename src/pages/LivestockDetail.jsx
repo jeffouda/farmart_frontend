@@ -1,5 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { addToCart } from "../redux/cartSlice";
+import { addToWishlist, removeFromWishlist } from "../redux/wishlistSlice";
+import { useAuth } from "../context/AuthContext";
+import toast from "react-hot-toast";
 import { 
   Phone, 
   ShieldCheck, 
@@ -56,10 +61,29 @@ const ANIMAL_DATA = {
 function LivestockDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { currentUser } = useAuth();
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
-
+  
+  const wishlistItems = useSelector(state => state.wishlist.items);
+  
+  // Safety: Handle string vs number ID comparison
+  const numericId = parseInt(id, 10);
+  
+  // In production, this would fetch from API
+  // For now, we use static data but with proper safety checks
   const animal = ANIMAL_DATA;
+  
+  // Safety Guard: Check if animal data is valid
+  if (!animal || !animal.id) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl font-semibold text-slate-600">Loading Product Details...</div>
+      </div>
+    );
+  }
+  
+  const isInWishlist = wishlistItems.some(item => item.id === animal.id);
 
   const handleContactFarmer = () => {
     // In production, this would open phone/WhatsApp
@@ -67,8 +91,51 @@ function LivestockDetail() {
   };
 
   const handleAddToCart = () => {
-    // In production, this would add to cart
-    console.log("Added to cart:", animal.id);
+    // 🔒 Security Check: Require authentication
+    if (!currentUser) {
+      navigate('/auth', { state: { from: location.pathname, message: "Please login to add items to cart" } });
+      return;
+    }
+    
+    // Safety: Ensure animal exists before dispatch
+    if (!animal) return;
+    
+    dispatch(addToCart({
+      id: animal.id,
+      name: animal.title,
+      price: animal.price,
+      image: animal.images?.[0]?.url || ""
+    }));
+    toast.success(`${animal.title} added to cart!`);
+  };
+
+  const handleToggleWishlist = async () => {
+    // 🔒 Security Check: Require authentication
+    if (!currentUser) {
+      navigate('/auth', { state: { from: location.pathname, message: "Please login to save items" } });
+      return;
+    }
+    
+    // Safety: Ensure animal exists before dispatch
+    if (!animal) return;
+    
+    if (isInWishlist) {
+      try {
+        await dispatch(removeFromWishlist(animal.id)).unwrap();
+        toast.success(`${animal.title} removed from wishlist`);
+      } catch (error) {
+        console.error("Remove from wishlist failed:", error);
+        toast.error("Failed to remove from wishlist. Please try again.");
+      }
+    } else {
+      try {
+        await dispatch(addToWishlist(animal.id)).unwrap();
+        toast.success(`${animal.title} added to wishlist!`);
+      } catch (error) {
+        console.error("Add to wishlist failed:", error);
+        toast.error("Failed to add to wishlist. Please try again.");
+      }
+    }
   };
 
   return (
@@ -92,14 +159,16 @@ function LivestockDetail() {
             {/* Main Image */}
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-white shadow-sm">
               <img
-                src={animal.images[selectedImage].url}
-                alt={animal.images[selectedImage].alt}
+                src={animal.images?.[selectedImage]?.url || ""}
+                alt={animal.images?.[selectedImage]?.alt || "Animal image"}
                 className="w-full h-full object-cover"
               />
               <button 
-                onClick={() => setIsFavorite(!isFavorite)}
-                className="absolute top-4 right-4 p-3 bg-white/90 backdrop-blur-sm rounded-full text-slate-400 hover:text-red-500 transition-colors shadow-lg">
-                <Heart size={20} fill={isFavorite ? "currentColor" : "none"} />
+                onClick={handleToggleWishlist}
+                className={`absolute top-4 right-4 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg transition-colors ${
+                  isInWishlist ? 'text-red-500' : 'text-slate-400 hover:text-red-500'
+                }`}>
+                <Heart size={20} fill={isInWishlist ? "currentColor" : "none"} />
               </button>
               <button className="absolute top-4 right-16 p-3 bg-white/90 backdrop-blur-sm rounded-full text-slate-400 hover:text-slate-600 transition-colors shadow-lg">
                 <Share2 size={20} />
@@ -108,7 +177,7 @@ function LivestockDetail() {
 
             {/* Thumbnails */}
             <div className="flex gap-3 overflow-x-auto pb-2">
-              {animal.images.map((image, index) => (
+              {animal.images?.map((image, index) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImage(index)}
@@ -141,7 +210,7 @@ function LivestockDetail() {
                 </div>
               </div>
               <p className="text-3xl md:text-4xl font-black text-orange-500 mt-4">
-                KES {animal.price.toLocaleString()}
+                KES {animal.price?.toLocaleString() || "0"}
               </p>
             </div>
 
@@ -164,7 +233,7 @@ function LivestockDetail() {
               </div>
               <div className="bg-white rounded-xl p-4 text-center shadow-sm border border-slate-100">
                 <MapPin className="w-6 h-6 mx-auto mb-2 text-green-600" />
-                <p className="text-lg font-bold text-slate-900">{animal.location.split(",")[0]}</p>
+                <p className="text-lg font-bold text-slate-900">{animal.location?.split(",")[0] || "N/A"}</p>
                 <p className="text-xs text-slate-500 uppercase tracking-wider">County</p>
               </div>
             </div>
@@ -173,23 +242,23 @@ function LivestockDetail() {
             <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center text-lg font-bold text-green-700">
-                  {animal.farmer.avatar}
+                  {animal.farmer?.avatar || "?"}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-slate-900">{animal.farmer.name}</h3>
-                    {animal.farmer.verified && (
+                    <h3 className="font-bold text-slate-900">{animal.farmer?.name || "Unknown"}</h3>
+                    {animal.farmer?.verified && (
                       <ShieldCheck className="w-5 h-5 text-green-600" />
                     )}
                   </div>
                   <div className="flex items-center gap-1 text-yellow-500 mt-1">
                     <Star size={14} fill="currentColor" />
-                    <span className="font-bold text-slate-900">{animal.farmer.rating}</span>
+                    <span className="font-bold text-slate-900">{animal.farmer?.rating || "N/A"}</span>
                     <span className="text-slate-400 text-sm">rating</span>
                   </div>
                 </div>
                 <button 
-                  onClick={() => navigate(`/profile/${animal.farmer.name.toLowerCase().replace(" ", "-")}`)}
+                  onClick={() => navigate(`/profile/${animal.farmer?.name?.toLowerCase().replace(" ", "-") || "unknown"}`)}
                   className="px-4 py-2 text-sm font-bold text-green-600 uppercase tracking-wider hover:text-green-500 transition-colors">
                   View Profile
                 </button>
@@ -203,7 +272,7 @@ function LivestockDetail() {
                 <h3 className="font-bold text-slate-900">Health & History</h3>
               </div>
               <p className="text-slate-700 leading-relaxed">
-                {animal.healthHistory}
+                {animal.healthHistory || "No health history available"}
               </p>
             </div>
 

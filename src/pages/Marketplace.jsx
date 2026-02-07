@@ -1,6 +1,11 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { Search, Heart, MapPin, Filter, Star } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Search, Heart, MapPin, Filter, Star, ShoppingCart } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { addToCart } from "../redux/cartSlice";
+import { fetchWishlist, addToWishlist, removeFromWishlist } from "../redux/wishlistSlice";
+import { useAuth } from "../context/AuthContext";
+import toast from "react-hot-toast";
 
 // Mock Data - Kenyan Livestock Listings
 const MOCK_LIVESTOCK = [
@@ -122,12 +127,91 @@ const ANIMAL_TYPES = ["Cow", "Goat", "Sheep", "Chicken", "Pig"];
 const LOCATIONS = ["Nakuru", "Kiambu", "Narok", "Kajiado", "Nairobi", "Eldoret", "Kisumu", "Marsabit"];
 
 function Marketplace() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [priceRange, setPriceRange] = useState({ min: "", max: "" });
   const [selectedLocations, setSelectedLocations] = useState([]);
   const [healthVerifiedOnly, setHealthVerifiedOnly] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  const wishlistItems = useSelector(state => state.wishlist.items);
+
+  const isInWishlist = (id) => wishlistItems.some(item => 
+    item.animal?.id === id || item.animal_id === id
+  );
+
+  const handleToggleWishlist = async (product, e) => {
+    e.stopPropagation();
+    
+    // 🔒 Security Check: Require authentication
+    if (!currentUser) {
+      toast((t) => (
+        <div className="flex items-center gap-3">
+          <p className="font-medium">Please login to save items</p>
+          <button 
+            onClick={() => { toast.dismiss(t.id); navigate('/auth'); }}
+            className="px-3 py-1 bg-green-600 text-white text-sm font-bold rounded-lg"
+          >
+            Login
+          </button>
+        </div>
+      ), { duration: 5000 });
+      return;
+    }
+
+    if (isInWishlist(product.id)) {
+      // Find the wishlist item ID for this animal
+      const wishlistItem = wishlistItems.find(item => 
+        item.animal?.id === product.id || item.animal_id === product.id
+      );
+      if (wishlistItem) {
+        try {
+          await dispatch(removeFromWishlist(wishlistItem.id)).unwrap();
+          toast.success(`${product.title} removed from wishlist`);
+        } catch (error) {
+          console.error("Remove from wishlist failed:", error);
+          toast.error("Failed to remove from wishlist. Please try again.");
+        }
+      }
+    } else {
+      try {
+        await dispatch(addToWishlist(product.id)).unwrap();
+        toast.success(`${product.title} added to wishlist!`);
+      } catch (error) {
+        console.error("Add to wishlist failed:", error);
+        toast.error("Failed to add to wishlist. Please try again.");
+      }
+    }
+  };
+
+  const handleAddToCart = (product) => {
+    // 🔒 Security Check: Require authentication
+    if (!currentUser) {
+      toast((t) => (
+        <div className="flex items-center gap-3">
+          <p className="font-medium">Please login to add items to cart</p>
+          <button 
+            onClick={() => { toast.dismiss(t.id); navigate('/auth', { state: { from: location.pathname } }); }}
+            className="px-3 py-1 bg-green-600 text-white text-sm font-bold rounded-lg"
+          >
+            Login
+          </button>
+        </div>
+      ), { duration: 5000 });
+      return;
+    }
+    // ✅ Logged in? Add to Redux
+    dispatch(addToCart({
+      id: product.id,
+      name: product.title,
+      price: product.price,
+      image: product.image
+    }));
+    toast.success(`${product.title} added to cart!`);
+  };
 
   const handleTypeToggle = (type) => {
     setSelectedTypes((prev) =>
@@ -305,8 +389,14 @@ function Marketplace() {
                       alt={item.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <button className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full text-slate-400 hover:text-red-500 transition-colors">
-                      <Heart size={18} />
+                    <button
+                      onClick={(e) => handleToggleWishlist(item, e)}
+                      className={`absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full transition-colors ${
+                        isInWishlist(item.id)
+                          ? 'text-red-500'
+                          : 'text-slate-400 hover:text-red-500'
+                      }`}>
+                      <Heart size={18} fill={isInWishlist(item.id) ? "currentColor" : "none"} />
                     </button>
                     {item.verified && (
                       <div className="absolute bottom-3 left-3 px-2 py-1 bg-green-600 text-white text-[10px] font-black uppercase tracking-wider rounded-lg">
@@ -345,12 +435,19 @@ function Marketplace() {
                       <span>{item.location}</span>
                     </div>
 
-                    {/* View Details Button */}
-                    <Link
-                      to="/livestock/1"
-                      className="block w-full py-3 text-center bg-gradient-to-r from-orange-400 to-yellow-400 text-white font-black uppercase text-xs tracking-wider rounded-xl hover:from-orange-500 hover:to-yellow-500 transition-all active:scale-95">
-                      View Details
-                    </Link>
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      <Link
+                        to="/livestock/1"
+                        className="flex-1 py-3 text-center bg-gradient-to-r from-orange-400 to-yellow-400 text-white font-black uppercase text-xs tracking-wider rounded-xl hover:from-orange-500 hover:to-yellow-500 transition-all active:scale-95">
+                        View Details
+                      </Link>
+                      <button
+                        onClick={() => handleAddToCart(item)}
+                        className="px-3 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all active:scale-95 flex items-center justify-center">
+                        <ShoppingCart size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
