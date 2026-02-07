@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, X, ShoppingCart, User, LogOut } from "lucide-react";
+import { Menu, X, ShoppingCart, User, LogOut, Heart } from "lucide-react";
 import { Icon } from "@iconify/react";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../context/AuthContext";
+import { useSelector } from "react-redux";
 
 function Navbar() {
   const { currentUser, logout } = useAuth();
@@ -10,8 +11,9 @@ function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Debug: Log current user state
-  console.log("Current User State:", currentUser);
+  // Get cart count and wishlist count from Redux
+  const totalQuantity = useSelector(state => state.cart.totalQuantity);
+  const wishlistCount = useSelector(state => state.wishlist.items.length);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -118,14 +120,30 @@ function Navbar() {
       </Link>
     )}
 
+    {/* Wishlist Icon - Only show for logged in users */}
+    {currentUser && (
+      <Link
+        to="/dashboard/wishlist"
+        className={`relative p-2 transition-colors duration-500 ${textColor} ${hoverColor}`}>
+        <Heart size={22} className="drop-shadow-sm" />
+        {wishlistCount > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-[10px] flex items-center justify-center rounded-full font-bold text-white shadow-sm animate-pulse">
+            {wishlistCount}
+          </span>
+        )}
+      </Link>
+    )}
+
     {/* Cart Icon */}
     <Link
       to="/cart"
       className={`relative p-2 transition-colors duration-500 ${textColor} ${hoverColor}`}>
       <ShoppingCart size={22} className="drop-shadow-sm" />
-      <span className="absolute top-0 right-0 w-4 h-4 bg-green-600 text-[10px] flex items-center justify-center rounded-full font-bold text-white shadow-sm">
-        0
-      </span>
+      {totalQuantity > 0 && (
+        <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-[10px] flex items-center justify-center rounded-full font-bold text-white shadow-sm animate-pulse">
+          {totalQuantity}
+        </span>
+      )}
     </Link>
 
     {/* MOBILE TOGGLE */}

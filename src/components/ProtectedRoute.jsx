@@ -1,21 +1,32 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, loading } = useAuth();
   const location = useLocation();
 
   // Debug: Log what we're checking
   console.log('🔐 Protected Route Check:', {
     currentUser,
+    loading,
     userRole: currentUser?.role,
     userRoleNested: currentUser?.user?.role,
     allowedRoles,
     pathname: location.pathname
   });
 
-  // Condition A: Not Logged In - Redirect to /auth
+  // Condition A: Still loading - Show nothing while checking
+  if (loading) {
+    console.log('⏳ Auth still loading, showing spinner...');
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
+  // Condition B: Not Logged In - Redirect to /auth
   if (!currentUser) {
     console.log('❌ Not logged in, redirecting to /auth');
     return <Navigate to="/auth" state={{ from: location }} replace />;
@@ -40,13 +51,13 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     isAllowed: allowedRolesLower?.includes(userRoleLower)
   });
 
-  // Condition B: Wrong Role - Check case-insensitively
+  // Condition C: Wrong Role - Check case-insensitively
   if (allowedRolesLower && userRoleLower && !allowedRolesLower.includes(userRoleLower)) {
     console.log('❌ Wrong role, redirecting to /unauthorized');
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Condition C: Success - Render the protected content
+  // Condition D: Success - Render the protected content
   console.log('✅ Access granted');
   return children;
 };
