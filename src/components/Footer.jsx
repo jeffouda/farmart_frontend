@@ -1,4 +1,5 @@
 import React from "react";
+import { Icon } from "@iconify/react";
 import {
   Facebook,
   Twitter,
@@ -21,8 +22,9 @@ const Footer = () => {
           <div className="w-full lg:w-1/3">
             <div className="flex items-center gap-4 mb-8">
               {/* Using a Beef icon in place of the image to ensure visibility if logo.jpg is missing */}
-              <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-900/20 transition-all duration-500 hover:rotate-6">
-                <Beef className="text-white w-8 h-8" />
+              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-green-900/20 transition-all duration-500 hover:rotate-6">
+                      <Icon icon="noto:cow" className="w-9 h-9" />
+                
               </div>
               <span className="text-2xl font-black text-white uppercase italic tracking-tighter">
                 Farm<span className="text-green-600">Art</span>

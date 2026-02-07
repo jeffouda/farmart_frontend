@@ -13,7 +13,6 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
-  // Start with loading = true to prevent false redirects
   const [loading, setLoading] = useState(true);
 
   // Initialize auth state from localStorage on mount
