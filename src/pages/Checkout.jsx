@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useParams } from 'react-router-dom';
 import { clearCart } from '../redux/cartSlice';
-import { addOrder } from '../redux/ordersSlice';
 import toast from 'react-hot-toast';
+import api from '../api/axios';
 import { ShoppingCart, MapPin, Phone, CreditCard, Truck, ArrowLeft, Check } from 'lucide-react';
 
 const KENYAN_COUNTIES = [
@@ -20,7 +20,44 @@ const KENYAN_COUNTIES = [
 const Checkout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { items, totalAmount } = useSelector(state => state.cart);
+  const { orderId } = useParams();
+  const { items: cartItems, totalAmount } = useSelector(state => state.cart);
+  
+  // For bargain orders, we'll use items from the order API
+  const [bargainOrder, setBargainOrder] = useState(null);
+  const [loadingOrder, setLoadingOrder] = useState(false);
+  
+  // Use bargain order items if available, otherwise use cart items
+  const items = bargainOrder?.items || cartItems;
+  const total = bargainOrder?.total_amount || totalAmount;
+  
+  useEffect(() => {
+    if (orderId) {
+      fetchBargainOrder();
+    }
+  }, [orderId]);
+  
+  const fetchBargainOrder = async () => {
+    setLoadingOrder(true);
+    try {
+      const response = await api.get(`/orders/${orderId}`);
+      console.log("Fetched order:", response.data);
+      
+      // Security check: Redirect if order is already paid
+      if (response.data.status === 'paid' || response.data.status === 'completed') {
+        toast.error('This order has already been paid!');
+        navigate('/dashboard/orders');
+        return;
+      }
+      
+      setBargainOrder(response.data);
+    } catch (error) {
+      console.error("Failed to fetch order:", error);
+      toast.error('Failed to load order details');
+    } finally {
+      setLoadingOrder(false);
+    }
+  };
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -38,21 +75,35 @@ const Checkout = () => {
     return `KSh ${price.toLocaleString()}`;
   };
 
-  const shippingCost = totalAmount > 50000 ? 0 : 1500;
-  const grandTotal = totalAmount + shippingCost;
+  const shippingCost = total > 50000 ? 0 : 1500;
+  const grandTotal = total + shippingCost;
+
+  if (loadingOrder) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="text-center">
           <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">Your cart is empty</h2>
-          <p className="text-slate-500 mb-6">Add some livestock to your cart before checking out.</p>
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">
+            {bargainOrder ? 'No items in order' : 'Your cart is empty'}
+          </h2>
+          <p className="text-slate-500 mb-6">
+            {bargainOrder 
+              ? 'The order has no items.'
+              : 'Add some livestock to your cart before checking out.'}
+          </p>
           <Link
-            to="/marketplace"
+            to={bargainOrder ? '/dashboard/orders' : '/marketplace'}
             className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors">
             <ArrowLeft size={20} />
-            Browse Marketplace
+            {bargainOrder ? 'Back to Orders' : 'Browse Marketplace'}
           </Link>
         </div>
       </div>
@@ -103,46 +154,56 @@ const Checkout = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!validateForm()) {
       return;
     }
 
     const { paymentMethod } = formData;
-    const delay = paymentMethod === 'mpesa' ? 3000 : 1000;
     const loadingMessage = paymentMethod === 'mpesa' 
       ? "Simulating M-Pesa STK Push... Check your phone"
       : "Placing Cash on Delivery Order...";
     const successMessage = paymentMethod === 'mpesa'
       ? "Payment Received! Order Placed."
       : "Order Placed! Pay on delivery.";
-    const orderStatus = paymentMethod === 'mpesa' ? "Paid" : "Pending Payment";
+    const orderStatus = paymentMethod === 'mpesa' ? "paid" : "pending";
 
-    // Phase 1: Show loading toast
+    // Show loading toast
     const loadingToast = toast.loading(loadingMessage);
 
-    // Phase 2: Process order after delay
-    setTimeout(() => {
-      // Create order data
-      const orderData = {
-        id: `ORD-${Date.now()}`,
-        date: new Date().toLocaleDateString(),
-        items: items,
-        total: grandTotal,
-        status: orderStatus,
-        customer: {
-          name: formData.fullName,
-          phone: formData.phone,
-          county: formData.county,
-          town: formData.town,
-          instructions: formData.instructions
-        },
-        paymentMethod: paymentMethod
-      };
+    try {
+      let orderId;
+      
+      if (bargainOrder) {
+        // For bargain orders, update the existing order's status via API
+        await api.put(`/orders/${bargainOrder.id}`, {
+          status: orderStatus,
+          payment_method: paymentMethod
+        });
+        orderId = bargainOrder.id;
+        console.log("Bargain order updated:", orderId);
+      } else {
+        // For cart orders, create a new order on backend
+        const response = await api.post('/orders/', {
+          items: items.map(item => ({
+            animal_id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity || 1
+          })),
+          total_amount: grandTotal,
+          status: orderStatus,
+          payment_method: paymentMethod
+        });
+        
+        orderId = response.data.order.id;
+        console.log("New order created:", orderId);
+      }
 
-      // Dispatch actions
-      dispatch(addOrder(orderData));
-      dispatch(clearCart());
+      // Clear cart (only for cart orders)
+      if (!bargainOrder) {
+        dispatch(clearCart());
+      }
 
       // Show success message
       toast.dismiss(loadingToast);
@@ -150,7 +211,11 @@ const Checkout = () => {
 
       // Redirect to orders page
       navigate('/dashboard/orders');
-    }, delay);
+    } catch (error) {
+      console.error("Failed to process order:", error);
+      toast.dismiss(loadingToast);
+      toast.error('Failed to place order. Please try again.');
+    }
   };
 
   return (
@@ -158,12 +223,14 @@ const Checkout = () => {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
           <Link
-            to="/cart"
+            to={bargainOrder ? '/dashboard/orders' : '/cart'}
             className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors">
             <ArrowLeft size={20} />
-            <span className="font-medium">Back to Cart</span>
+            <span className="font-medium">{bargainOrder ? 'Back to Orders' : 'Back to Cart'}</span>
           </Link>
-          <h1 className="text-2xl font-bold text-slate-900">Checkout</h1>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {bargainOrder ? 'Checkout' : 'Checkout'}
+          </h1>
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); handlePlaceOrder(); }}>
@@ -311,14 +378,21 @@ const Checkout = () => {
             <div className="lg:col-span-1">
               <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24">
                 <h2 className="text-lg font-bold text-slate-900 mb-4">Order Summary</h2>
+                
+                {bargainOrder && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-green-700 font-medium">Bargain Order</p>
+                    <p className="text-xs text-green-600">Order #{bargainOrder.id?.slice(0, 8)}</p>
+                  </div>
+                )}
 
                 {/* Items List */}
                 <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
-                  {items.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3">
+                  {items.map((item, index) => (
+                    <div key={item.id || index} className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
-                        {item.image ? (
-                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        {(item.image || item.image_url) ? (
+                          <img src={item.image || item.image_url} alt={item.name} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-slate-400">
                             <ShoppingCart size={16} />
