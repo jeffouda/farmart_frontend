@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   LogOut,
+  MessageCircle,
 } from "lucide-react";
 
 const DashboardSidebar = () => {
@@ -18,6 +19,7 @@ const DashboardSidebar = () => {
   const menuItems = [
     { name: "Dashboard", path: "/farmer-dashboard", icon: LayoutGrid },
     { name: "Inventory", path: "/farmer-dashboard/inventory", icon: Box },
+    { name: "Negotiations", path: "/negotiations", icon: MessageCircle },
     { name: "Order", path: "/farmer-dashboard/orders", icon: ShoppingBag },
     { name: "Analytic", path: "/farmer-dashboard/analytics", icon: BarChart3 },
   ];
