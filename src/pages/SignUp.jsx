@@ -36,6 +36,7 @@ const SignUp = () => {
     full_name: '',
     phone_number: '',
     location: '',
+    farm_name: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -96,10 +97,24 @@ const SignUp = () => {
         }
       } else {
         // --- REGISTRATION LOGIC ---
+        const payload = {
+          full_name: formData.full_name,
+          phone_number: formData.phone_number,
+          location: formData.location,
+          email: formData.email,
+          password: formData.password,
+          role: role,
+        };
+        
+        // Farmers require farm_name
+        if (role === 'farmer') {
+          payload.farm_name = formData.farm_name;
+        }
+        
         const response = await fetch(`/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...formData, role }),
+          body: JSON.stringify(payload),
         });
 
         const data = await response.json();
@@ -251,6 +266,22 @@ const SignUp = () => {
                     ))}
                   </datalist>
                 </div>
+
+                {/* Farm Name (Farmer Only) */}
+                {role === 'farmer' && (
+                  <div className="relative">
+                    <Tractor className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input 
+                      type="text" 
+                      name="farm_name" 
+                      value={formData.farm_name} 
+                      onChange={handleChange} 
+                      placeholder="Farm Name" 
+                      required={role === 'farmer'}
+                      className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -5,6 +5,7 @@ import { addToCart } from "../redux/cartSlice";
 import { addToWishlist, removeFromWishlist } from "../redux/wishlistSlice";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
+import api from "../api/axios";
 import { 
   Phone, 
   ShieldCheck, 
@@ -15,7 +16,8 @@ import {
   Share2,
   ArrowLeft,
   Star,
-  ShoppingCart
+  ShoppingCart,
+  MessageCircle
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -135,6 +137,40 @@ function LivestockDetail() {
         console.error("Add to wishlist failed:", error);
         toast.error("Failed to add to wishlist. Please try again.");
       }
+    }
+  };
+
+  // Handle Make Offer - Starts a negotiation bargain
+  const handleMakeOffer = async () => {
+    // 🔒 Security Check: Require authentication
+    if (!currentUser) {
+      navigate('/auth', { state: { from: location.pathname, message: "Please login to make an offer" } });
+      return;
+    }
+    
+    // Only buyers can make offers
+    if (currentUser.role !== 'buyer') {
+      toast.error("Only buyers can make offers");
+      return;
+    }
+
+    try {
+      // Calculate initial offer (90% of asking price as default)
+      const initialOffer = Math.round(animal.price * 0.9);
+      
+      const response = await api.post('/bargain/sessions', {
+        animal_id: animal.id,
+        offer_amount: initialOffer,
+        message: `I'm interested in buying this ${animal.breed}. Would you accept KES ${initialOffer.toLocaleString()}?`
+      });
+      
+      toast.success('Offer sent! Starting negotiation...');
+      
+      // Redirect to the negotiation room
+      navigate(`/negotiations/${response.data.session.id}`);
+    } catch (error) {
+      console.error('Failed to create offer:', error);
+      toast.error(error.response?.data?.error || 'Failed to create offer. Please try again.');
     }
   };
 
@@ -277,16 +313,25 @@ function LivestockDetail() {
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <button
                 onClick={handleContactFarmer}
-                className="flex items-center justify-center gap-2 py-4 bg-green-600 text-white font-black uppercase text-sm tracking-wider rounded-xl hover:bg-green-500 transition-all active:scale-95 shadow-lg shadow-green-600/20">
+                className="flex items-center justify-center gap-2 py-4 bg-green-600 text-white font-black uppercase text-sm tracking-wider rounded-xl hover:bg-green-500 transition-all active:scale-95 shadow-lg shadow-green-600/20"
+              >
                 <Phone size={18} />
-                Contact Farmer
+                Contact
+              </button>
+              <button
+                onClick={handleMakeOffer}
+                className="flex items-center justify-center gap-2 py-4 bg-blue-600 text-white font-black uppercase text-sm tracking-wider rounded-xl hover:bg-blue-500 transition-all active:scale-95 shadow-lg shadow-blue-600/20"
+              >
+                <MessageCircle size={18} />
+                Make Offer
               </button>
               <button
                 onClick={handleAddToCart}
-                className="flex items-center justify-center gap-2 py-4 bg-white border-2 border-slate-200 text-slate-700 font-black uppercase text-sm tracking-wider rounded-xl hover:border-green-600 hover:text-green-600 transition-all active:scale-95">
+                className="flex items-center justify-center gap-2 py-4 bg-white border-2 border-slate-200 text-slate-700 font-black uppercase text-sm tracking-wider rounded-xl hover:border-green-600 hover:text-green-600 transition-all active:scale-95"
+              >
                 <ShoppingCart size={18} />
                 Add to Cart
               </button>

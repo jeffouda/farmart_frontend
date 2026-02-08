@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -18,6 +18,8 @@ import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
 import Wishlist from "./pages/Wishlist";
 import Unauthorized from "./pages/Unauthorized";
+import NegotiationList from "./pages/NegotiationList";
+import NegotiationRoom from "./pages/NegotiationRoom";
 
 // Buyer Dashboard Components
 import BuyerDashboard from "./pages/BuyerDashboard";
@@ -37,10 +39,15 @@ import AddLivestock from "./pages/AddLivestock";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import ScrollToTop from "./components/ScrollToTop";
 
 function App() {
   const dispatch = useDispatch();
   const { currentUser } = useAuth();
+  const location = useLocation();
+
+  // Only show Footer on home page
+  const showFooter = location.pathname === '/';
 
   // Sync Redux state with backend when user logs in
   useEffect(() => {
@@ -60,6 +67,7 @@ function App() {
   return (
     <div className="flex flex-col min-h-screen bg-white">
       <Navbar />
+      <ScrollToTop />
       <main className="flex-grow">
         <Routes>
           {/* --- Public Routes --- */}
@@ -69,7 +77,8 @@ function App() {
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/livestock/:id" element={<LivestockDetail />} />
           <Route path="/cart" element={<Cart />} />
-          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/checkout/:orderId" element={<Checkout />} />
+          <Route path="/orders" element={<Orders />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
 
@@ -86,6 +95,10 @@ function App() {
             <Route path="wishlist" element={<BuyerWishlist />} />
             <Route path="settings" element={<BuyerSettings />} />
           </Route>
+
+          {/* Negotiations Routes */}
+          <Route path="/negotiations" element={<NegotiationList />} />
+          <Route path="/negotiations/:id" element={<NegotiationRoom />} />
 
           {/* --- Protected Farmer Routes --- */}
           <Route
@@ -117,7 +130,7 @@ function App() {
           />
         </Routes>
       </main>
-      
+      {showFooter && <Footer />}
       <Toaster position="top-right" />
     </div>
   );

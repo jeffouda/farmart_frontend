@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Heart, MapPin, Filter, Star, ShoppingCart } from "lucide-react";
+import { Search, Heart, MapPin, Filter, Star, ShoppingCart, MessageCircle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "../redux/cartSlice";
 import { fetchWishlist, addToWishlist, removeFromWishlist } from "../redux/wishlistSlice";
 import { useAuth } from "../context/AuthContext";
+import BargainModal from "../components/BargainModal";
 import toast from "react-hot-toast";
+import api from "../api/axios";
 
 // Mock Data - Kenyan Livestock Listings
 const MOCK_LIVESTOCK = [
@@ -125,6 +127,34 @@ const MOCK_LIVESTOCK = [
 
 const ANIMAL_TYPES = ["Cow", "Goat", "Sheep", "Chicken", "Pig"];
 const LOCATIONS = ["Nakuru", "Kiambu", "Narok", "Kajiado", "Nairobi", "Eldoret", "Kisumu", "Marsabit"];
+const PLACEHOLDER_IMAGE = "https://placehold.co/400x300?text=No+Image";
+
+// Helper function to get image URL with fallback
+const getImageUrl = (item) => {
+  // API returns image_url, mock data uses image
+  return item.image_url || item.image || PLACEHOLDER_IMAGE;
+};
+
+// Helper to format API data to match mock data structure
+const formatLivestockItem = (item) => ({
+  id: item.id,
+  title: `${item.species} - ${item.breed}`,
+  price: item.price,
+  location: item.location || "Unknown",
+  type: item.species,
+  breed: item.breed,
+  weight: `${item.weight}kg`,
+  age: item.age ? `${Math.floor(item.age / 12)} years` : "Unknown",
+  image: getImageUrl(item),
+  farmer: { 
+    name: item.farmer_name || "Unknown Farmer", 
+    avatar: (item.farmer_name || "U").substring(0, 2).toUpperCase() 
+  },
+  rating: 4.5, // Default rating for API items
+  verified: true,
+  // Keep original data for bargain modal
+  ...item
+});
 
 function Marketplace() {
   const dispatch = useDispatch();
@@ -136,6 +166,28 @@ function Marketplace() {
   const [selectedLocations, setSelectedLocations] = useState([]);
   const [healthVerifiedOnly, setHealthVerifiedOnly] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [selectedAnimal, setSelectedAnimal] = useState(null);
+  const [livestockData, setLivestockData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch livestock from API
+  useEffect(() => {
+    const fetchLivestock = async () => {
+      try {
+        const response = await api.get('/livestock/all');
+        console.log("Marketplace Data:", response.data);
+        setLivestockData(response.data.animals || []);
+      } catch (error) {
+        console.error("Failed to fetch livestock:", error);
+        // Fall back to mock data if API fails
+        setLivestockData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLivestock();
+  }, []);
 
   const wishlistItems = useSelector(state => state.wishlist.items);
 
@@ -225,9 +277,16 @@ function Marketplace() {
     );
   };
 
-  const filteredLivestock = MOCK_LIVESTOCK.filter((item) => {
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.breed.toLowerCase().includes(searchQuery.toLowerCase());
+  // Combine API data with mock data for display, prioritizing API data
+  const allLivestock = useMemo(() => {
+    const formattedAPI = livestockData.map(formatLivestockItem);
+    // If we have API data, use only that; otherwise fallback to mock
+    return livestockData.length > 0 ? formattedAPI : MOCK_LIVESTOCK;
+  }, [livestockData]);
+
+  const filteredLivestock = allLivestock.filter((item) => {
+    const matchesSearch = (item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.breed || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = selectedTypes.length === 0 || selectedTypes.includes(item.type);
     const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.location);
     const matchesMinPrice = !priceRange.min || item.price >= parseInt(priceRange.min);
@@ -385,8 +444,11 @@ function Marketplace() {
                   {/* Image */}
                   <div className="relative aspect-[4/3] overflow-hidden">
                     <img
-                      src={item.image}
-                      alt={item.title}
+                      src={getImageUrl(item)}
+                      alt={item.title || "Livestock"}
+                      onError={(e) => {
+                        e.target.src = PLACEHOLDER_IMAGE;
+                      }}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <button
@@ -420,12 +482,12 @@ function Marketplace() {
                     {/* Farmer Info */}
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-[10px] font-bold text-green-700">
-                        {item.farmer.avatar}
+                        {(item.farmer?.avatar || item.farmer?.name?.substring(0, 2) || "U").toUpperCase()}
                       </div>
-                      <span className="text-xs font-medium text-slate-600">{item.farmer.name}</span>
+                      <span className="text-xs font-medium text-slate-600">{item.farmer?.name || "Unknown"}</span>
                       <div className="flex items-center gap-1 ml-auto text-yellow-500">
                         <Star size={12} fill="currentColor" />
-                        <span className="text-xs font-bold">{item.rating}</span>
+                        <span className="text-xs font-bold">{item.rating || "N/A"}</span>
                       </div>
                     </div>
 
@@ -437,10 +499,16 @@ function Marketplace() {
 
                     {/* Action Buttons */}
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => setSelectedAnimal(item)}
+                        className="flex-1 py-3 bg-gradient-to-r from-orange-400 to-yellow-400 text-white font-black uppercase text-xs tracking-wider rounded-xl hover:from-orange-500 hover:to-yellow-500 transition-all active:scale-95 flex items-center justify-center gap-1">
+                        <MessageCircle size={16} />
+                        Make Offer
+                      </button>
                       <Link
-                        to="/livestock/1"
-                        className="flex-1 py-3 text-center bg-gradient-to-r from-orange-400 to-yellow-400 text-white font-black uppercase text-xs tracking-wider rounded-xl hover:from-orange-500 hover:to-yellow-500 transition-all active:scale-95">
-                        View Details
+                        to={`/livestock/${item.id}`}
+                        className="flex-1 py-3 text-center bg-slate-100 text-slate-700 font-black uppercase text-xs tracking-wider rounded-xl hover:bg-slate-200 transition-all active:scale-95">
+                        Details
                       </Link>
                       <button
                         onClick={() => handleAddToCart(item)}
@@ -551,6 +619,13 @@ function Marketplace() {
           </div>
         </div>
       )}
+
+      {/* Make Offer Modal */}
+      <BargainModal 
+        animal={selectedAnimal} 
+        isOpen={!!selectedAnimal} 
+        onClose={() => setSelectedAnimal(null)} 
+      />
     </div>
   );
 }

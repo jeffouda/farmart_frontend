@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  MessageCircle,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -16,6 +17,7 @@ import Footer from '../components/Footer';
 const SIDEBAR_LINKS = [
   { icon: User, label: 'Overview', path: '/dashboard' },
   { icon: Package, label: 'My Orders', path: '/dashboard/orders' },
+  { icon: MessageCircle, label: 'Negotiations', path: '/negotiations' },
   { icon: Heart, label: 'Wishlist', path: '/dashboard/wishlist' },
   { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
 ];

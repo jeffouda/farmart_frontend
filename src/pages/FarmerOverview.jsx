@@ -1,5 +1,8 @@
 import React from "react";
-import { Plus, Upload, Clock, FileDown } from "lucide-react";
+import { Plus, Upload, Clock, FileDown, FlaskConical } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import api from "../api/axios";
+import toast from "react-hot-toast";
 
 const StatCard = ({ title, value, subtext, color }) => (
   <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-50 flex-1">
@@ -16,6 +19,19 @@ const StatCard = ({ title, value, subtext, color }) => (
 );
 
 const FarmerOverview = () => {
+  const navigate = useNavigate();
+
+  const handleGenerateTestCow = async () => {
+    try {
+      const response = await api.post('/livestock/seed_test', {});
+      toast.success('Test cow generated successfully!');
+      navigate('/farmer-dashboard/inventory');
+    } catch (error) {
+      console.error('Failed to generate test cow:', error);
+      toast.error(error.response?.data?.error || 'Failed to generate test cow');
+    }
+  };
+
   return (
     <div>
       <h1 className="text-2xl font-black text-slate-900">Dashboard Overview</h1>
@@ -80,8 +96,11 @@ const FarmerOverview = () => {
             <button className="w-full flex items-center gap-4 p-5 bg-slate-100/50 hover:bg-slate-200/50 rounded-2xl transition-all text-slate-700 font-bold">
               <Plus size={22} className="text-slate-400" /> Add New Livestock
             </button>
-            <button className="w-full flex items-center gap-4 p-5 bg-slate-100/50 hover:bg-slate-200/50 rounded-2xl transition-all text-slate-700 font-bold">
-              <Upload size={22} className="text-slate-400" /> Bulk Upload(CSV)
+            <button
+              onClick={handleGenerateTestCow}
+              className="w-full flex items-center gap-4 p-5 bg-amber-50 hover:bg-amber-100 rounded-2xl transition-all text-amber-700 font-bold"
+            >
+              <FlaskConical size={22} className="text-amber-500" /> Generate Test Cow
             </button>
           </div>
         </div>
