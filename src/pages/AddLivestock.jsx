@@ -127,3 +127,101 @@ const AddLivestock = () => {
       setLoading(false);
     }
   };
+
+  return (
+    <div className="p-4 md:p-6 max-w-6xl mx-auto">
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900">Add New Livestock</h1>
+        <p className="text-slate-500">Fill in the details and add a photo of your animal</p>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* LEFT SIDE: Data Form */}
+          <div className="space-y-6">
+            {/* Category Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Category <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <select
+                  name="species"
+                  value={formData.species}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                >
+                  <option value="">Select category</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Breed Input */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Breed <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="breed"
+                value={formData.breed}
+                onChange={handleInputChange}
+                placeholder="e.g., Fresian, Boer, Dorper"
+                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+              />
+            </div>
+
+            {/* Age & Weight Row */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Age <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    name="age"
+                    value={formData.age}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                    min="0"
+                    className="flex-1 px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                  />
+                  <select
+                    name="ageUnit"
+                    value={formData.ageUnit}
+                    onChange={handleInputChange}
+                    className="w-24 px-3 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none bg-white"
+                  >
+                    <option value="months">Months</option>
+                    <option value="years">Years</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Weight <span className="text-slate-400">(kg)</span>
+                </label>
+                <div className="relative">
+                  <Scale className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <input
+                    type="number"
+                    name="weight"
+                    value={formData.weight}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                    min="0"
+                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
