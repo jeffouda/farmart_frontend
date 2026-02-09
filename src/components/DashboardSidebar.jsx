@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   LayoutGrid,
   Box,
@@ -15,6 +16,12 @@ import {
 const DashboardSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/auth";
+  };
 
   const menuItems = [
     { name: "Dashboard", path: "/farmer-dashboard", icon: LayoutGrid },
@@ -71,7 +78,10 @@ const DashboardSidebar = () => {
             })}
           </nav>
 
-          <button className="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-red-500 mt-auto">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-red-500 mt-auto w-full"
+          >
             <LogOut size={22} />
             <span className="text-[15px]">Logout</span>
           </button>

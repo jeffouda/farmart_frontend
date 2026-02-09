@@ -3,127 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { Search, Heart, MapPin, Filter, Star, ShoppingCart, MessageCircle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "../redux/cartSlice";
-import { fetchWishlist, addToWishlist, removeFromWishlist } from "../redux/wishlistSlice";
+import { fetchWishlist, addToWishlist, removeFromWishlist, optimisticRemoveFromWishlist } from "../redux/wishlistSlice";
 import { useAuth } from "../context/AuthContext";
 import BargainModal from "../components/BargainModal";
 import toast from "react-hot-toast";
 import api from "../api/axios";
-
-// Mock Data - Kenyan Livestock Listings
-const MOCK_LIVESTOCK = [
-  {
-    id: 1,
-    title: "Boran Bull - Premium",
-    price: 185000,
-    location: "Nakuru",
-    type: "Cow",
-    breed: "Boran",
-    weight: "450kg",
-    age: "3 years",
-    image: "https://images.unsplash.com/photo-1546445317-29f4545e9d53?auto=format&fit=crop&q=80",
-    farmer: { name: "John Kamau", avatar: "JK" },
-    rating: 4.8,
-    verified: true,
-  },
-  {
-    id: 2,
-    title: "Boer Goat - Doe",
-    price: 28000,
-    location: "Kiambu",
-    type: "Goat",
-    breed: "Boer",
-    weight: "35kg",
-    age: "1.5 years",
-    image: "https://images.unsplash.com/photo-1484557985045-edf25e08da73?auto=format&fit=crop&q=80",
-    farmer: { name: "Mary Wanjiku", avatar: "MW" },
-    rating: 4.5,
-    verified: true,
-  },
-  {
-    id: 3,
-    title: "Sahiwal Heifer",
-    price: 165000,
-    location: "Narok",
-    type: "Cow",
-    breed: "Sahiwal",
-    weight: "380kg",
-    age: "2.5 years",
-    image: "https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?auto=format&fit=crop&q=80",
-    farmer: { name: "Samuel Ole", avatar: "SO" },
-    rating: 4.9,
-    verified: true,
-  },
-  {
-    id: 4,
-    title: "Dorper Ram",
-    price: 32000,
-    location: "Kajiado",
-    type: "Sheep",
-    breed: "Dorper",
-    weight: "45kg",
-    age: "1 year",
-    image: "https://images.unsplash.com/photo-1484557985045-edf25e08da73?auto=format&fit=crop&q=80",
-    farmer: { name: "Paul Mutua", avatar: "PM" },
-    rating: 4.6,
-    verified: true,
-  },
-  {
-    id: 5,
-    title: "Kienyenji Chicken - Layers",
-    price: 3500,
-    location: "Nairobi",
-    type: "Chicken",
-    breed: "Kienyenji",
-    weight: "2kg",
-    age: "8 months",
-    image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80",
-    farmer: { name: "Grace Achieng", avatar: "GA" },
-    rating: 4.3,
-    verified: true,
-  },
-  {
-    id: 6,
-    title: "Large White Pig - Sow",
-    price: 45000,
-    location: "Eldoret",
-    type: "Pig",
-    breed: "Large White",
-    weight: "120kg",
-    age: "1.5 years",
-    image: "https://images.unsplash.com/photo-1604842247038-08c761d7a4d2?auto=format&fit=crop&q=80",
-    farmer: { name: "Robert Kiprop", avatar: "RK" },
-    rating: 4.7,
-    verified: true,
-  },
-  {
-    id: 7,
-    title: "Ankole Bull - Breeding",
-    price: 220000,
-    location: "Kisumu",
-    type: "Cow",
-    breed: "Ankole",
-    weight: "520kg",
-    age: "4 years",
-    image: "https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?auto=format&fit=crop&q=80",
-    farmer: { name: "Daniel Ochieng", avatar: "DO" },
-    rating: 4.9,
-    verified: true,
-  },
-  {
-    id: 8,
-    title: "Galla Goat - Buck",
-    price: 25000,
-    location: "Marsabit",
-    type: "Goat",
-    breed: "Galla",
-    weight: "40kg",
-    age: "2 years",
-    image: "https://images.unsplash.com/photo-1484557985045-edf25e08da73?auto=format&fit=crop&q=80",
-    farmer: { name: "Hassan Adan", avatar: "HA" },
-    rating: 4.4,
-    verified: true,
-  },
-];
 
 const ANIMAL_TYPES = ["Cow", "Goat", "Sheep", "Chicken", "Pig"];
 const LOCATIONS = ["Nakuru", "Kiambu", "Narok", "Kajiado", "Nairobi", "Eldoret", "Kisumu", "Marsabit"];
@@ -131,11 +15,10 @@ const PLACEHOLDER_IMAGE = "https://placehold.co/400x300?text=No+Image";
 
 // Helper function to get image URL with fallback
 const getImageUrl = (item) => {
-  // API returns image_url, mock data uses image
   return item.image_url || item.image || PLACEHOLDER_IMAGE;
 };
 
-// Helper to format API data to match mock data structure
+// Helper to format API data to match component's expected structure
 const formatLivestockItem = (item) => ({
   id: item.id,
   title: `${item.species} - ${item.breed}`,
@@ -150,8 +33,8 @@ const formatLivestockItem = (item) => ({
     name: item.farmer_name || "Unknown Farmer", 
     avatar: (item.farmer_name || "U").substring(0, 2).toUpperCase() 
   },
-  rating: 4.5, // Default rating for API items
-  verified: true,
+  rating: item.average_rating || 4.5,
+  verified: item.is_verified || true,
   // Keep original data for bargain modal
   ...item
 });
@@ -169,17 +52,27 @@ function Marketplace() {
   const [selectedAnimal, setSelectedAnimal] = useState(null);
   const [livestockData, setLivestockData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Fetch livestock from API
   useEffect(() => {
     const fetchLivestock = async () => {
       try {
+        setError(null);
         const response = await api.get('/livestock/all');
-        console.log("Marketplace Data:", response.data);
+        
+        // Verification logging for API data confirmation
+        console.group("🦄 API DATA VERIFICATION");
+        console.log("Source URL:", "/api/livestock/all");
+        console.log("HTTP Status:", response.status);
+        console.log("Raw Data Count:", response.data.animals?.length || 0);
+        console.log("Sample Item (ID 1):", response.data.animals?.[0]);
+        console.groupEnd();
+        
         setLivestockData(response.data.animals || []);
       } catch (error) {
         console.error("Failed to fetch livestock:", error);
-        // Fall back to mock data if API fails
+        setError("Failed to load livestock. Please try again.");
         setLivestockData([]);
       } finally {
         setLoading(false);
@@ -191,14 +84,17 @@ function Marketplace() {
 
   const wishlistItems = useSelector(state => state.wishlist.items);
 
-  const isInWishlist = (id) => wishlistItems.some(item => 
-    item.animal?.id === id || item.animal_id === id
-  );
+  const isInWishlist = (id) => {
+    const searchId = String(id);
+    return wishlistItems.some(item => 
+      String(item.animal?.id) === searchId || String(item.animal_id) === searchId
+    );
+  };
 
   const handleToggleWishlist = async (product, e) => {
     e.stopPropagation();
     
-    // 🔒 Security Check: Require authentication
+    // Security Check: Require authentication
     if (!currentUser) {
       toast((t) => (
         <div className="flex items-center gap-3">
@@ -214,23 +110,21 @@ function Marketplace() {
       return;
     }
 
-    if (isInWishlist(product.id)) {
-      // Find the wishlist item ID for this animal
-      const wishlistItem = wishlistItems.find(item => 
-        item.animal?.id === product.id || item.animal_id === product.id
-      );
-      if (wishlistItem) {
-        try {
-          await dispatch(removeFromWishlist(wishlistItem.id)).unwrap();
-          toast.success(`${product.title} removed from wishlist`);
-        } catch (error) {
-          console.error("Remove from wishlist failed:", error);
-          toast.error("Failed to remove from wishlist. Please try again.");
-        }
+    const productId = product.id || product.animal?.id;
+    
+    if (isInWishlist(productId)) {
+      // Optimistic removal for instant UI feedback
+      dispatch(optimisticRemoveFromWishlist(productId));
+      try {
+        await dispatch(removeFromWishlist(productId)).unwrap();
+        toast.success(`${product.title} removed from wishlist`);
+      } catch (error) {
+        console.error("Remove from wishlist failed:", error);
+        toast.error("Failed to remove from wishlist. Please try again.");
       }
     } else {
       try {
-        await dispatch(addToWishlist(product.id)).unwrap();
+        await dispatch(addToWishlist(productId)).unwrap();
         toast.success(`${product.title} added to wishlist!`);
       } catch (error) {
         console.error("Add to wishlist failed:", error);
@@ -240,7 +134,7 @@ function Marketplace() {
   };
 
   const handleAddToCart = (product) => {
-    // 🔒 Security Check: Require authentication
+    // Security Check: Require authentication
     if (!currentUser) {
       toast((t) => (
         <div className="flex items-center gap-3">
@@ -255,9 +149,8 @@ function Marketplace() {
       ), { duration: 5000 });
       return;
     }
-    // ✅ Logged in? Add to Redux
     dispatch(addToCart({
-      id: product.id,
+      id: product.id || product.animal?.id,
       name: product.title,
       price: product.price,
       image: product.image
@@ -277,11 +170,9 @@ function Marketplace() {
     );
   };
 
-  // Combine API data with mock data for display, prioritizing API data
+  // Format API data for display
   const allLivestock = useMemo(() => {
-    const formattedAPI = livestockData.map(formatLivestockItem);
-    // If we have API data, use only that; otherwise fallback to mock
-    return livestockData.length > 0 ? formattedAPI : MOCK_LIVESTOCK;
+    return livestockData.map(formatLivestockItem);
   }, [livestockData]);
 
   const filteredLivestock = allLivestock.filter((item) => {
@@ -294,6 +185,40 @@ function Marketplace() {
     const matchesVerified = !healthVerifiedOnly || item.verified;
     return matchesSearch && matchesType && matchesLocation && matchesMinPrice && matchesMaxPrice && matchesVerified;
   });
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium">Loading livestock...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 text-red-300 mx-auto mb-4">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <p className="text-red-600 font-medium mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
@@ -626,6 +551,11 @@ function Marketplace() {
         isOpen={!!selectedAnimal} 
         onClose={() => setSelectedAnimal(null)} 
       />
+
+      {/* Data Source Indicator */}
+      <div className="text-center py-4 text-xs text-slate-400">
+        Data Source: {livestockData.length > 0 ? "Live API Connected ✅" : "No Data / Loading ⏳"}
+      </div>
     </div>
   );
 }
