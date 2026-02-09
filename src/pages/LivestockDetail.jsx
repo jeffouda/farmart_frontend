@@ -96,69 +96,50 @@ function LivestockDetails() {
     setIsWishlisted(!isWishlisted);
   };
 
+    // Handle message farmer
   const handleMessageFarmer = () => {
     if (!currentUser) {
       toast.error('Please login to message the farmer');
       navigate('/auth');
       return;
     }
-
     toast.success('Opening chat with farmer...');
   };
 
-  {/* Tabs */}
-  <div className="bg-white rounded-2xl shadow-sm mt-6 overflow-hidden">
-   <div className="flex border-b border-gray-100">
-      {['description', 'health', 'seller'].map(tab => (
-        <button
-          key={tab}
-          onClick={() => setActiveTab(tab)}
-          className={`flex-1 py-4 text-sm font-semibold capitalize ${
-          activeTab === tab
-            ? 'text-green-600 border-b-2 border-green-600'
-            : 'text-slate-500'
-        }`}
-      >
-        {tab === 'health' ? 'Health Records' : tab === 'seller' ? 'Seller Info' : 'Description'}
-      </button>
-    ))}
-  </div>
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4">
+          {/* Breadcrumb skeleton */}
+          <div className="flex items-center gap-2 mb-6">
+            <div className="h-4 bg-gray-200 rounded w-16 animate-pulse" />
+            <ChevronRight className="w-4 h-4 text-gray-300" />
+            <div className="h-4 bg-gray-200 rounded w-12 animate-pulse" />
+            <ChevronRight className="w-4 h-4 text-gray-300" />
+            <div className="h-4 bg-gray-200 rounded w-24 animate-pulse" />
+          </div>
 
-  {activeTab === 'description' && (
-  <p>{animal?.description || 'No description available for this animal.'}</p>
-)}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Image skeleton */}
+            <div className="bg-gray-200 rounded-2xl h-96 animate-pulse" />
 
-  {activeTab === 'health' && (
-  <p>No health records available</p>
-)}
+            {/* Details skeleton */}
+            <div className="space-y-4">
+              <div className="h-10 bg-gray-200 rounded w-3/4 animate-pulse" />
+              <div className="h-8 bg-gray-200 rounded w-1/3 animate-pulse" />
 
-  {activeTab === 'seller' && (
-  <button onClick={handleMessageFarmer}>Contact</button>
-)}
+              <div className="grid grid-cols-2 gap-4 mt-6">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="h-20 bg-gray-200 rounded-xl animate-pulse" />
+                ))}
+              </div>
 
-
-if (loading) {
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="bg-gray-200 rounded-2xl h-96 animate-pulse" />
+              <div className="h-14 bg-gray-200 rounded-xl animate-pulse mt-6" />
+              <div className="h-14 bg-gray-200 rounded-xl animate-pulse" />
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  );
-}
-
-if (error) {
-  return (
-    <div className="min-h-screen bg-gray-50 py-8 text-center">
-      <Shield className="w-16 h-16 text-red-300 mx-auto mb-4" />
-      <p className="text-red-600">{error}</p>
-    </div>
-  );
-}
-
-{/* Mobile Sticky Footer */}
-<div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t p-4">
-  <button onClick={handleAddToCart}>
-    Add to Cart - {formatPrice(animal?.price)}
-  </button>
-</div>
+    );
+  }
