@@ -43,17 +43,42 @@ function LivestockDetails() {
     fetchAnimal();
   }, [id]);
 
-
+  // Check wishlist status
   useEffect(() => {
     if (animal) {
-      setIsWishlisted(
-        wishlistItems.some(
-          item => String(item.animal?.id) === String(animal.id)
-        )
-      );
+      setIsWishlisted(wishlistItems.some(
+        item => String(item.animal?.id) === String(animal.id)
+      ));
     }
   }, [animal, wishlistItems]);
 
+  // Format price
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+      maximumFractionDigits: 0,
+    }).format(price || 0);
+  };
+
+  // Handle add to cart
+  const handleAddToCart = () => {
+    if (!currentUser) {
+      toast.error('Please login to add items to cart');
+      navigate('/auth');
+      return;
+    }
+
+    dispatch(addToCart({
+      id: animal.id,
+      name: `${animal.species} - ${animal.breed}`,
+      price: animal.price,
+      image: animal.image_url || animal.image
+    }));
+    toast.success('Added to cart!');
+  };
+
+  // Handle wishlist toggle
   const handleToggleWishlist = () => {
     if (!currentUser) {
       toast.error('Please login to save items');
@@ -68,34 +93,7 @@ function LivestockDetails() {
       dispatch(addToWishlist(animal.id));
       toast.success('Added to wishlist!');
     }
-
     setIsWishlisted(!isWishlisted);
-  };
-
-  
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      maximumFractionDigits: 0,
-    }).format(price || 0);
-  };
-
-  const handleAddToCart = () => {
-    if (!currentUser) {
-      toast.error('Please login to add items to cart');
-      navigate('/auth');
-      return;
-    }
-
-    dispatch(addToCart({
-      id: animal.id,
-      name: `${animal.species} - ${animal.breed}`,
-      price: animal.price,
-      image: animal.image_url || animal.image
-    }));
-
-    toast.success('Added to cart!');
   };
 
   const handleMessageFarmer = () => {
