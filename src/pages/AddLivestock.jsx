@@ -272,3 +272,95 @@ const AddLivestock = () => {
                 </label>
               </div>
             </div>
+
+             {/* Description Textarea */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Description
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                placeholder="Describe your animal (appearance, characteristics, etc.)"
+                rows={4}
+                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all resize-none"
+              />
+            </div>
+
+            {/* Health History */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Health Notes / History
+              </label>
+              <div className="relative">
+                <FileText className="absolute left-3 top-3 text-slate-400" size={18} />
+                <textarea
+                  name="health_history"
+                  value={formData.health_history}
+                  onChange={handleInputChange}
+                  placeholder="Vaccinations, illnesses, special care instructions..."
+                  rows={3}
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all resize-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT SIDE: Image Preview */}
+          <div className="space-y-6">
+            <div className="bg-slate-50 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                Animal Photo <span className="text-red-500">*</span>
+              </h3>
+
+              {/* Dashed Upload Box */}
+              <div className="relative">
+                {!previewUrl ? (
+                  // Upload State
+                  <label className="block cursor-pointer">
+                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-green-500 hover:bg-green-50 transition-all">
+                      <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                        <Upload className="text-green-600" size={32} />
+                      </div>
+                      <p className="text-lg font-medium text-slate-700 mb-2">
+                        Click to Upload Image
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        PNG, JPG up to 5MB
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  // Preview State
+                  <div className="relative">
+                    <div className="rounded-xl overflow-hidden border border-slate-200">
+                      <img
+                        src={previewUrl}
+                        alt="Preview"
+                        className="w-full h-80 object-cover"
+                      />
+                    </div>
+                    {/* Remove Button */}
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute -top-3 -right-3 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                    >
+                      <X size={18} />
+                    </button>
+                    {/* Image Label */}
+                    <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
+                      <ImageIcon size={16} />
+                      <span>{imageFile?.name}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
