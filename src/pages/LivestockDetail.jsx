@@ -143,3 +143,156 @@ function LivestockDetails() {
       </div>
     );
   }
+
+    // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <div className="bg-white rounded-2xl p-12 inline-block">
+            <Shield className="w-16 h-16 text-red-300 mx-auto mb-4" />
+            <p className="text-red-600 mb-4">{error}</p>
+            <Link
+              to="/marketplace"
+              className="inline-block px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              Back to Marketplace
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Breadcrumbs */}
+        <nav className="flex items-center gap-2 mb-6 text-sm">
+          <Link to="/" className="text-slate-500 hover:text-slate-700">Home</Link>
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <Link to="/marketplace" className="text-slate-500 hover:text-slate-700">Marketplace</Link>
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <Link to={`/marketplace?category=${animal?.species}`} className="text-slate-500 hover:text-slate-700">
+            {animal?.species || 'Category'}
+          </Link>
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <span className="text-slate-900 font-medium truncate">{animal?.breed}</span>
+        </nav>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Column - Visuals */}
+          <div>
+            {/* Large Hero Image */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <img
+                src={animal?.image_url || 'https://placehold.co/800x600?text=No+Image'}
+                alt={animal?.breed}
+                className="w-full h-96 object-cover"
+              />
+            </div>
+
+            {/* Thumbnail Strip (if multiple images) */}
+            {animal?.images?.length > 1 && (
+              <div className="flex gap-3 mt-4 overflow-x-auto pb-2">
+                {[animal.image_url, ...(animal.images || [])].slice(0, 5).map((img, idx) => (
+                  <button key={idx} className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-transparent hover:border-green-500 transition-colors">
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right Column - Details */}
+          <div>
+            {/* Header */}
+            <div className="bg-white rounded-2xl shadow-sm p-6">
+              {/* Species badge */}
+              <span className="inline-block bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-full mb-3">
+                {animal?.species}
+              </span>
+
+              {/* Title */}
+              <h1 className="text-3xl font-bold text-slate-900 mb-2">
+                {animal?.breed || 'Unknown Breed'}
+              </h1>
+
+              {/* Location */}
+              <div className="flex items-center gap-1 text-slate-500 mb-4">
+                <MapPin className="w-4 h-4" />
+                <span>{animal?.location || 'Unknown Location'}</span>
+              </div>
+
+              {/* Price */}
+              <p className="text-3xl font-bold text-green-600 mb-6">
+                {formatPrice(animal?.price)}
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mb-6">
+                <button
+                  onClick={handleAddToCart}
+                  className="flex-1 py-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  Add to Cart
+                </button>
+
+                <button
+                  onClick={handleMessageFarmer}
+                  className="px-6 py-4 border-2 border-slate-200 hover:border-green-500 text-slate-700 hover:text-green-600 rounded-xl flex items-center justify-center transition-colors"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={handleToggleWishlist}
+                  className={`px-6 py-4 border-2 rounded-xl flex items-center justify-center transition-colors ${
+                    isWishlisted
+                      ? 'border-red-200 bg-red-50 text-red-500'
+                      : 'border-slate-200 hover:border-red-200 text-slate-400 hover:text-red-500'
+                  }`}
+                >
+                  <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-current' : ''}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Vital Stats Grid */}
+            <div className="bg-white rounded-2xl shadow-sm p-6 mt-6">
+              <h2 className="text-lg font-bold text-slate-900 mb-4">Vital Statistics</h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-slate-500 mb-1">
+                    <Calendar className="w-4 h-4" />
+                    <span className="text-sm">Age</span>
+                  </div>
+                  <p className="font-semibold text-slate-900">{animal?.age || 'N/A'} years</p>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-slate-500 mb-1">
+                    <Weight className="w-4 h-4" />
+                    <span className="text-sm">Weight</span>
+                  </div>
+                  <p className="font-semibold text-slate-900">{animal?.weight || 'N/A'} kg</p>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-slate-500 mb-1">
+                    <Scale className="w-4 h-4" />
+                    <span className="text-sm">Gender</span>
+                  </div>
+                  <p className="font-semibold text-slate-900">{animal?.gender || 'N/A'}</p>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-slate-500 mb-1">
+                    <Award className="w-4 h-4" />
+                    <span className="text-sm">Breed</span>
+                  </div>
+                  <p className="font-semibold text-slate-900">{animal?.breed || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
