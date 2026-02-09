@@ -96,7 +96,7 @@ function LivestockDetails() {
     setIsWishlisted(!isWishlisted);
   };
 
-    // Handle message farmer
+  // Handle message farmer
   const handleMessageFarmer = () => {
     if (!currentUser) {
       toast.error('Please login to message the farmer');
@@ -144,7 +144,7 @@ function LivestockDetails() {
     );
   }
 
-    // Error state
+  // Error state
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">

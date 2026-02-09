@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, X, ShoppingCart, User, LogOut, Heart } from "lucide-react";
+import { Menu, X, ShoppingCart, User, LogOut, Heart, HelpCircle } from "lucide-react";
 import { Icon } from "@iconify/react";
 import { useAuth } from "../context/AuthContext";
 import { useSelector } from "react-redux";
@@ -128,6 +128,15 @@ function Navbar() {
                   {currentUser.full_name?.split(" ")[0] || "User"}
                 </span>
               </Link>
+              {/* Help & Support Link */}
+              <Link
+                to="/dispute/new"
+                className={`hidden sm:flex items-center gap-1 text-sm font-medium transition-colors ${textColor} hover:text-red-500`}
+                title="Report an issue or get help"
+              >
+                <HelpCircle size={16} />
+                Help
+              </Link>
               {/* Log Out Button */}
               <button
                 onClick={handleLogout}
@@ -183,6 +192,13 @@ function Navbar() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="text-sm font-bold uppercase tracking-widest text-white hover:text-green-500 transition-colors">
                 Dashboard
+              </Link>
+              <Link
+                to="/dispute/new"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-sm font-bold uppercase tracking-widest text-white hover:text-red-500 transition-colors flex items-center gap-2">
+                <HelpCircle size={18} />
+                Help & Support
               </Link>
               <button
                 onClick={() => {
