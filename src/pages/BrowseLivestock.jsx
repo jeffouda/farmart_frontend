@@ -1,538 +1,446 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Search, Heart, MapPin, Filter, Star } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
-import { addToCart } from "../redux/cartSlice";
-import { fetchWishlist, addToWishlist, removeFromWishlist, optimisticRemoveFromWishlist } from "../redux/wishlistSlice";
-import { useAuth } from "../context/AuthContext";
-import toast from "react-hot-toast";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Upload,
+  X,
+  Image as ImageIcon,
+  DollarSign,
+  Scale,
+  Tag,
+  FileText,
+  CheckCircle,
+} from "lucide-react";
 import api from "../api/axios";
+import toast from "react-hot-toast";
 
-const ANIMAL_TYPES = ["Cow", "Goat", "Sheep", "Chicken", "Pig"];
-const LOCATIONS = ["Nakuru", "Kiambu", "Narok", "Kajiado", "Nairobi", "Eldoret", "Kisumu", "Marsabit"];
-const PLACEHOLDER_IMAGE = "https://placehold.co/400x300?text=No+Image";
+const AddLivestock = () => {
+  const navigate = useNavigate();
 
-// Helper function to get image URL with fallback
-const getImageUrl = (item) => {
-  return item.image_url || item.image || PLACEHOLDER_IMAGE;
-};
-
-// Helper to format API data to match component's expected structure
-const formatLivestockItem = (item) => ({
-  id: item.id,
-  title: `${item.species} - ${item.breed}`,
-  price: item.price,
-  location: item.location || "Unknown",
-  type: item.species,
-  breed: item.breed,
-  weight: `${item.weight}kg`,
-  age: item.age ? `${Math.floor(item.age / 12)} years` : "Unknown",
-  image: getImageUrl(item),
-  farmer: { 
-    name: item.farmer_name || "Unknown Farmer", 
-    avatar: (item.farmer_name || "U").substring(0, 2).toUpperCase() 
-  },
-  rating: item.average_rating || 4.5,
-  verified: item.is_verified || true,
-  // Keep original data
-  ...item
-});
-
-function BrowseLivestock() {
-  const dispatch = useDispatch();
-  const { currentUser } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTypes, setSelectedTypes] = useState([]);
-  const [priceRange, setPriceRange] = useState({ min: "", max: "" });
-  const [selectedLocations, setSelectedLocations] = useState([]);
-  const [healthVerifiedOnly, setHealthVerifiedOnly] = useState(false);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [livestockData, setLivestockData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Fetch livestock from API
-  useEffect(() => {
-    const fetchLivestock = async () => {
-      try {
-        setError(null);
-        const response = await api.get('/livestock/all');
-        
-        // Verification logging for API data confirmation
-        console.group("🦄 API DATA VERIFICATION");
-        console.log("Source URL:", "/api/livestock/all");
-        console.log("HTTP Status:", response.status);
-        console.log("Raw Data Count:", response.data.animals?.length || 0);
-        console.log("Sample Item (ID 1):", response.data.animals?.[0]);
-        console.groupEnd();
-        
-        setLivestockData(response.data.animals || []);
-      } catch (error) {
-        console.error("Failed to fetch livestock:", error);
-        setError("Failed to load livestock. Please try again.");
-        setLivestockData([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLivestock();
-  }, []);
-
-  const wishlistItems = useSelector(state => state.wishlist.items);
-
-  const isInWishlist = (id) => {
-    const searchId = String(id);
-    return wishlistItems.some(item => 
-      String(item.animal?.id) === searchId || String(item.animal_id) === searchId
-    );
-  };
-
-  const handleToggleWishlist = async (item, e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Security Check: Require authentication
-    if (!currentUser) {
-      toast((t) => (
-        <div className="flex items-center gap-3">
-          <p className="font-medium">Please login to save items</p>
-          <button 
-            onClick={() => { toast.dismiss(t.id); navigate('/auth'); }}
-            className="px-3 py-1 bg-green-600 text-white text-sm font-bold rounded-lg"
-          >
-            Login
-          </button>
-        </div>
-      ), { duration: 5000 });
-      return;
-    }
-
-    const itemId = item.id || item.animal?.id;
-    
-    if (isInWishlist(itemId)) {
-      // Optimistic removal for instant UI feedback
-      dispatch(optimisticRemoveFromWishlist(itemId));
-      try {
-        await dispatch(removeFromWishlist(itemId)).unwrap();
-        toast.success(`${item.title} removed from wishlist`);
-      } catch (error) {
-        console.error("Remove from wishlist failed:", error);
-        toast.error("Failed to remove from wishlist. Please try again.");
-      }
-    } else {
-      try {
-        await dispatch(addToWishlist(itemId)).unwrap();
-        toast.success(`${item.title} added to wishlist!`);
-      } catch (error) {
-        console.error("Add to wishlist failed:", error);
-        toast.error("Failed to add to wishlist. Please try again.");
-      }
-    }
-  };
-
-  const handleAddToCart = (item) => {
-    // Security Check: Require authentication
-    if (!currentUser) {
-      toast.error("Please login to add items to cart");
-      return;
-    }
-    dispatch(addToCart({
-      id: item.id || item.animal?.id,
-      name: item.title,
-      price: item.price,
-      image: item.image
-    }));
-    toast.success(`${item.title} added to cart!`);
-  };
-
-  const handleTypeToggle = (type) => {
-    setSelectedTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
-    );
-  };
-
-  const handleLocationToggle = (location) => {
-    setSelectedLocations((prev) =>
-      prev.includes(location) ? prev.filter((l) => l !== location) : [...prev, location]
-    );
-  };
-
-  // Format API data for display
-  const allLivestock = useMemo(() => {
-    return livestockData.map(formatLivestockItem);
-  }, [livestockData]);
-
-  const filteredLivestock = allLivestock.filter((item) => {
-    const matchesSearch = (item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.breed || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = selectedTypes.length === 0 || selectedTypes.includes(item.type);
-    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.location);
-    const matchesMinPrice = !priceRange.min || item.price >= parseInt(priceRange.min);
-    const matchesMaxPrice = !priceRange.max || item.price <= parseInt(priceRange.max);
-    const matchesVerified = !healthVerifiedOnly || item.verified;
-    return matchesSearch && matchesType && matchesLocation && matchesMinPrice && matchesMaxPrice && matchesVerified;
+  // State management
+  const [formData, setFormData] = useState({
+    species: "",
+    breed: "",
+    age: "",
+    ageUnit: "years",
+    weight: "",
+    price: "",
+    description: "",
+    gender: "male",
+    health_history: "",
   });
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600 font-medium">Loading livestock...</p>
-        </div>
-      </div>
-    );
-  }
+  const [imageFile, setImageFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [categories] = useState(["Cow", "Goat", "Sheep", "Chicken", "Pig"]);
 
-  // Error state
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 text-red-300 mx-auto mb-4">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <p className="text-red-600 font-medium mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Clean up preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  // Handle text input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // Handle file selection
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please select an image file");
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image must be less than 5MB");
+        return;
+      }
+
+      setImageFile(file);
+
+      // Create preview URL
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    }
+  };
+
+  // Remove image
+  const removeImage = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setImageFile(null);
+    setPreviewUrl(null);
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Validate required fields
+    if (!formData.species || !formData.breed || !formData.price || !imageFile) {
+      toast.error("Please fill in all required fields and upload an image");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Create FormData for multipart/form-data
+      const data = new FormData();
+      data.append("species", formData.species);
+      data.append("breed", formData.breed);
+      data.append("age", formData.age);
+      data.append("ageUnit", formData.ageUnit);
+      data.append("weight", formData.weight);
+      data.append("price", formData.price);
+      data.append("description", formData.description);
+      data.append("gender", formData.gender);
+      data.append("health_history", formData.health_history);
+      data.append("image", imageFile);
+
+      // API call
+      await api.post("/livestock/create", data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      toast.success("Livestock listed successfully!");
+      navigate("/farmer-dashboard/inventory");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error(error.response?.data?.error || "Failed to upload livestock");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b sticky top-16 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">
-              Browse Livestock
-            </h1>
-            <div className="flex-1 max-w-xl relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+    <div className="p-4 md:p-6 max-w-6xl mx-auto">
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-900">Add New Livestock</h1>
+        <p className="text-slate-500">
+          Fill in the details and add a photo of your animal
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* LEFT SIDE: Data Form */}
+          <div className="space-y-6">
+            {/* Category Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Category <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Tag
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
+                <select
+                  name="species"
+                  value={formData.species}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                >
+                  <option value="">Select category</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Breed Input */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Breed <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
-                placeholder="Search livestock..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-slate-100 rounded-xl font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                name="breed"
+                value={formData.breed}
+                onChange={handleInputChange}
+                placeholder="e.g., Fresian, Boer, Dorper"
+                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
               />
             </div>
-            <button
-              onClick={() => setMobileFiltersOpen(true)}
-              className="lg:hidden flex items-center gap-2 px-4 py-3 bg-slate-100 rounded-xl font-medium text-slate-700">
-              <Filter size={20} />
-              Filters
-            </button>
-          </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 flex gap-8">
-        {/* Sidebar - Desktop */}
-        <aside className="hidden lg:block w-64 flex-shrink-0">
-          <div className="bg-white rounded-2xl p-6 shadow-sm sticky top-36">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-black text-slate-900 uppercase italic">Filters</h2>
-              {(selectedTypes.length > 0 || selectedLocations.length > 0 || healthVerifiedOnly) && (
-                <button
-                  onClick={() => {
-                    setSelectedTypes([]);
-                    setSelectedLocations([]);
-                    setPriceRange({ min: "", max: "" });
-                    setHealthVerifiedOnly(false);
-                  }}
-                  className="text-xs font-bold text-green-600 uppercase tracking-wider hover:text-green-500">
-                  Clear All
-                </button>
-              )}
-            </div>
-
-            {/* Animal Types */}
-            <div className="mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Animal Type</h3>
-              <div className="space-y-2">
-                {ANIMAL_TYPES.map((type) => (
-                  <label key={type} className="flex items-center gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={selectedTypes.includes(type)}
-                      onChange={() => handleTypeToggle(type)}
-                      className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500"
-                    />
-                    <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900">{type}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Price Range */}
-            <div className="mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Price Range</h3>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  placeholder="Min"
-                  value={priceRange.min}
-                  onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-                <input
-                  type="number"
-                  placeholder="Max"
-                  value={priceRange.max}
-                  onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-              </div>
-            </div>
-
-            {/* Location */}
-            <div className="mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Location</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {LOCATIONS.map((location) => (
-                  <label key={location} className="flex items-center gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={selectedLocations.includes(location)}
-                      onChange={() => handleLocationToggle(location)}
-                      className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500"
-                    />
-                    <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900">{location}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Health Verified Toggle */}
-            <div className="pt-4 border-t border-slate-100">
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm font-medium text-slate-700">Health Verified Only</span>
-                <button
-                  onClick={() => setHealthVerifiedOnly(!healthVerifiedOnly)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    healthVerifiedOnly ? "bg-green-600" : "bg-slate-200"
-                  }`}>
-                  <span
-                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                      healthVerifiedOnly ? "translate-x-6" : ""
-                    }`}
+            {/* Age & Weight Row */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Age <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    name="age"
+                    value={formData.age}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                    min="0"
+                    className="flex-1 px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
                   />
-                </button>
-              </label>
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Grid */}
-        <main className="flex-1">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-500">
-              Showing <span className="font-bold text-slate-900">{filteredLivestock.length}</span> livestock
-            </p>
-          </div>
-
-          {filteredLivestock.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 text-center">
-              <MapPin className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-slate-900 mb-2">No livestock found</h3>
-              <p className="text-slate-500">Try adjusting your filters or search query</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredLivestock.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow group">
-                  {/* Image */}
-                  <div className="relative aspect-[4/3] overflow-hidden">
-                    <img
-                      src={getImageUrl(item)}
-                      alt={item.title || "Livestock"}
-                      onError={(e) => {
-                        e.target.src = PLACEHOLDER_IMAGE;
-                      }}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <button 
-                      onClick={(e) => handleToggleWishlist(item, e)}
-                      className={`absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full transition-colors ${
-                        isInWishlist(item.id)
-                          ? 'text-red-500'
-                          : 'text-slate-400 hover:text-red-500'
-                      }`}>
-                      <Heart size={18} fill={isInWishlist(item.id) ? "currentColor" : "none"} />
-                    </button>
-                    {item.verified && (
-                      <div className="absolute bottom-3 left-3 px-2 py-1 bg-green-600 text-white text-[10px] font-black uppercase tracking-wider rounded-lg">
-                        Verified
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="font-bold text-slate-900 leading-tight">{item.title}</h3>
-                    </div>
-                    <p className="text-xl font-black text-orange-500 mb-2">
-                      KES {item.price.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-slate-400 mb-3">
-                      {item.breed} • {item.weight} • {item.age}
-                    </p>
-
-                    {/* Farmer Info */}
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-[10px] font-bold text-green-700">
-                        {(item.farmer?.avatar || item.farmer?.name?.substring(0, 2) || "U").toUpperCase()}
-                      </div>
-                      <span className="text-xs font-medium text-slate-600">{item.farmer?.name || "Unknown"}</span>
-                      <div className="flex items-center gap-1 ml-auto text-yellow-500">
-                        <Star size={12} fill="currentColor" />
-                        <span className="text-xs font-bold">{item.rating || "N/A"}</span>
-                      </div>
-                    </div>
-
-                    {/* Location */}
-                    <div className="flex items-center gap-1 text-xs text-slate-400 mb-4">
-                      <MapPin size={12} />
-                      <span>{item.location}</span>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAddToCart(item)}
-                        className="flex-1 py-3 bg-green-600 text-white font-black uppercase text-xs tracking-wider rounded-xl hover:bg-green-700 transition-all active:scale-95">
-                        Add to Cart
-                      </button>
-                      <Link
-                        to={`/livestock/${item.id}`}
-                        className="flex-1 py-3 text-center bg-slate-100 text-slate-700 font-black uppercase text-xs tracking-wider rounded-xl hover:bg-slate-200 transition-all active:scale-95">
-                        Details
-                      </Link>
-                    </div>
-                  </div>
+                  <select
+                    name="ageUnit"
+                    value={formData.ageUnit}
+                    onChange={handleInputChange}
+                    className="w-24 px-3 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none bg-white"
+                  >
+                    <option value="months">Months</option>
+                    <option value="years">Years</option>
+                  </select>
                 </div>
-              ))}
-            </div>
-          )}
-        </main>
-      </div>
-
-      {/* Mobile Filter Drawer */}
-      {mobileFiltersOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileFiltersOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-80 bg-white p-6 overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-black text-slate-900 uppercase italic">Filters</h2>
-              <button onClick={() => setMobileFiltersOpen(false)} className="p-2 text-slate-400">
-                ✕
-              </button>
-            </div>
-
-            {/* Animal Types */}
-            <div className="mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Animal Type</h3>
-              <div className="space-y-2">
-                {ANIMAL_TYPES.map((type) => (
-                  <label key={type} className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedTypes.includes(type)}
-                      onChange={() => handleTypeToggle(type)}
-                      className="w-4 h-4 rounded border-slate-300 text-green-600"
-                    />
-                    <span className="text-sm font-medium text-slate-700">{type}</span>
-                  </label>
-                ))}
               </div>
-            </div>
 
-            {/* Price Range */}
-            <div className="mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Price Range</h3>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  placeholder="Min"
-                  value={priceRange.min}
-                  onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm"
-                />
-                <input
-                  type="number"
-                  placeholder="Max"
-                  value={priceRange.max}
-                  onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Location */}
-            <div className="mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Location</h3>
-              <div className="space-y-2">
-                {LOCATIONS.map((location) => (
-                  <label key={location} className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedLocations.includes(location)}
-                      onChange={() => handleLocationToggle(location)}
-                      className="w-4 h-4 rounded border-slate-300 text-green-600"
-                    />
-                    <span className="text-sm font-medium text-slate-700">{location}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Health Verified */}
-            <div className="mb-6">
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm font-medium text-slate-700">Health Verified Only</span>
-                <button
-                  onClick={() => setHealthVerifiedOnly(!healthVerifiedOnly)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    healthVerifiedOnly ? "bg-green-600" : "bg-slate-200"
-                  }`}>
-                  <span
-                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                      healthVerifiedOnly ? "translate-x-6" : ""
-                    }`}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Weight <span className="text-slate-400">(kg)</span>
+                </label>
+                <div className="relative">
+                  <Scale
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    size={18}
                   />
-                </button>
-              </label>
+                  <input
+                    type="number"
+                    name="weight"
+                    value={formData.weight}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                    min="0"
+                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
             </div>
 
+            {/* Price Input */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Price <span className="text-red-500">*</span>{" "}
+                <span className="text-slate-400">(KES)</span>
+              </label>
+              <div className="relative">
+                <DollarSign
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
+                <input
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                  min="0"
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Gender Selection */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Gender
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="male"
+                    checked={formData.gender === "male"}
+                    onChange={handleInputChange}
+                    className="w-4 h-4 text-green-600 focus:ring-green-500"
+                  />
+                  <span className="text-slate-700">Male</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="female"
+                    checked={formData.gender === "female"}
+                    onChange={handleInputChange}
+                    className="w-4 h-4 text-green-600 focus:ring-green-500"
+                  />
+                  <span className="text-slate-700">Female</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Description Textarea */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Description
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                placeholder="Describe your animal (appearance, characteristics, etc.)"
+                rows={4}
+                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all resize-none"
+              />
+            </div>
+
+            {/* Health History */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Health Notes / History
+              </label>
+              <div className="relative">
+                <FileText
+                  className="absolute left-3 top-3 text-slate-400"
+                  size={18}
+                />
+                <textarea
+                  name="health_history"
+                  value={formData.health_history}
+                  onChange={handleInputChange}
+                  placeholder="Vaccinations, illnesses, special care instructions..."
+                  rows={3}
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all resize-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT SIDE: Image Preview */}
+          <div className="space-y-6">
+            <div className="bg-slate-50 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                Animal Photo <span className="text-red-500">*</span>
+              </h3>
+
+              {/* Dashed Upload Box */}
+              <div className="relative">
+                {!previewUrl ? (
+                  <label className="block cursor-pointer">
+                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-green-500 hover:bg-green-50 transition-all">
+                      <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                        <Upload className="text-green-600" size={32} />
+                      </div>
+                      <p className="text-lg font-medium text-slate-700 mb-2">
+                        Click to Upload Image
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        PNG, JPG up to 5MB
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  <div className="relative">
+                    <div className="rounded-xl overflow-hidden border border-slate-200">
+                      <img
+                        src={previewUrl}
+                        alt="Preview"
+                        className="w-full h-80 object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute -top-3 -right-3 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                    >
+                      <X size={18} />
+                    </button>
+                    <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
+                      <ImageIcon size={16} />
+                      <span>{imageFile?.name}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Summary Card */}
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                Summary
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Category</span>
+                  <span className="font-medium text-slate-900">
+                    {formData.species || "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Breed</span>
+                  <span className="font-medium text-slate-900">
+                    {formData.breed || "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Price</span>
+                  <span className="font-bold text-green-600">
+                    KES{" "}
+                    {formData.price
+                      ? parseFloat(formData.price).toLocaleString()
+                      : "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Photo</span>
+                  <span
+                    className={`font-medium ${previewUrl ? "text-green-600" : "text-red-500"}`}
+                  >
+                    {previewUrl ? "Uploaded" : "Required"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Button */}
             <button
-              onClick={() => setMobileFiltersOpen(false)}
-              className="w-full py-4 bg-green-600 text-white font-black uppercase text-sm tracking-wider rounded-xl">
-              Apply Filters
+              type="submit"
+              disabled={loading || !previewUrl}
+              className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${
+                loading || !previewUrl
+                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                  : "bg-green-600 text-white hover:bg-green-700 active:scale-98"
+              }`}
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={24} />
+                  List Livestock
+                </>
+              )}
             </button>
           </div>
         </div>
-      )}
-
-      {/* Data Source Indicator */}
-      <div className="text-center py-4 text-xs text-slate-400">
-        Data Source: {livestockData.length > 0 ? "Live API Connected ✅" : "No Data / Loading ⏳"}
-      </div>
+      </form>
     </div>
   );
-}
+};
 
-export default BrowseLivestock;
+export default AddLivestock;
