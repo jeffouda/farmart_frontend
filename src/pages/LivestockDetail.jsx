@@ -39,3 +39,33 @@ function LivestockDetails() {
 
     fetchAnimal();
   }, [id]);
+
+  const [isWishlisted, setIsWishlisted] = useState(false);
+
+  useEffect(() => {
+    if (animal) {
+      setIsWishlisted(
+        wishlistItems.some(
+          item => String(item.animal?.id) === String(animal.id)
+        )
+      );
+    }
+  }, [animal, wishlistItems]);
+
+  const handleToggleWishlist = () => {
+    if (!currentUser) {
+      toast.error('Please login to save items');
+      navigate('/auth');
+      return;
+    }
+
+    if (isWishlisted) {
+      dispatch(removeFromWishlist(animal.id));
+      toast.success('Removed from wishlist');
+    } else {
+      dispatch(addToWishlist(animal.id));
+      toast.success('Added to wishlist!');
+    }
+
+    setIsWishlisted(!isWishlisted);
+  };
