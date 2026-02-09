@@ -6,7 +6,6 @@ import {
   Image as ImageIcon,
   DollarSign,
   Scale,
-  Calendar,
   Tag,
   FileText,
   CheckCircle,
@@ -30,7 +29,7 @@ const AddLivestock = () => {
     health_history: "",
   });
 
-    const [imageFile, setImageFile] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [categories] = useState(["Cow", "Goat", "Sheep", "Chicken", "Pig"]);
@@ -63,8 +62,7 @@ const AddLivestock = () => {
         return;
       }
 
-
- // Validate file size (max 5MB)
+      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast.error("Image must be less than 5MB");
         return;
@@ -113,8 +111,8 @@ const AddLivestock = () => {
       data.append("health_history", formData.health_history);
       data.append("image", imageFile);
 
-      // Actual API call
-      const response = await api.post("/livestock/create", data, {
+      // API call
+      await api.post("/livestock/create", data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -133,7 +131,9 @@ const AddLivestock = () => {
       {/* Page Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900">Add New Livestock</h1>
-        <p className="text-slate-500">Fill in the details and add a photo of your animal</p>
+        <p className="text-slate-500">
+          Fill in the details and add a photo of your animal
+        </p>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -146,7 +146,10 @@ const AddLivestock = () => {
                 Category <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Tag
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
                 <select
                   name="species"
                   value={formData.species}
@@ -211,7 +214,10 @@ const AddLivestock = () => {
                   Weight <span className="text-slate-400">(kg)</span>
                 </label>
                 <div className="relative">
-                  <Scale className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Scale
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    size={18}
+                  />
                   <input
                     type="number"
                     name="weight"
@@ -224,14 +230,18 @@ const AddLivestock = () => {
                 </div>
               </div>
             </div>
-  {/* Price Input */}
+
+            {/* Price Input */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Price <span className="text-red-500">*</span>{" "}
                 <span className="text-slate-400">(KES)</span>
               </label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <DollarSign
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
                 <input
                   type="number"
                   name="price"
@@ -246,7 +256,9 @@ const AddLivestock = () => {
 
             {/* Gender Selection */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Gender</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Gender
+              </label>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -273,7 +285,7 @@ const AddLivestock = () => {
               </div>
             </div>
 
-             {/* Description Textarea */}
+            {/* Description Textarea */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Description
@@ -294,7 +306,10 @@ const AddLivestock = () => {
                 Health Notes / History
               </label>
               <div className="relative">
-                <FileText className="absolute left-3 top-3 text-slate-400" size={18} />
+                <FileText
+                  className="absolute left-3 top-3 text-slate-400"
+                  size={18}
+                />
                 <textarea
                   name="health_history"
                   value={formData.health_history}
@@ -317,7 +332,6 @@ const AddLivestock = () => {
               {/* Dashed Upload Box */}
               <div className="relative">
                 {!previewUrl ? (
-                  // Upload State
                   <label className="block cursor-pointer">
                     <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-green-500 hover:bg-green-50 transition-all">
                       <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
@@ -338,7 +352,6 @@ const AddLivestock = () => {
                     />
                   </label>
                 ) : (
-                  // Preview State
                   <div className="relative">
                     <div className="rounded-xl overflow-hidden border border-slate-200">
                       <img
@@ -347,7 +360,6 @@ const AddLivestock = () => {
                         className="w-full h-80 object-cover"
                       />
                     </div>
-                    {/* Remove Button */}
                     <button
                       type="button"
                       onClick={removeImage}
@@ -355,7 +367,6 @@ const AddLivestock = () => {
                     >
                       <X size={18} />
                     </button>
-                    {/* Image Label */}
                     <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
                       <ImageIcon size={16} />
                       <span>{imageFile?.name}</span>
@@ -365,9 +376,11 @@ const AddLivestock = () => {
               </div>
             </div>
 
-             {/* Summary Card */}
+            {/* Summary Card */}
             <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Summary</h3>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                Summary
+              </h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Category</span>
@@ -384,18 +397,24 @@ const AddLivestock = () => {
                 <div className="flex justify-between">
                   <span className="text-slate-500">Price</span>
                   <span className="font-bold text-green-600">
-                    KES {formData.price ? parseFloat(formData.price).toLocaleString() : "—"}
+                    KES{" "}
+                    {formData.price
+                      ? parseFloat(formData.price).toLocaleString()
+                      : "—"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Photo</span>
-                  <span className={font-medium ${previewUrl ? "text-green-600" : "text-red-500"}}>
+                  <span
+                    className={`font-medium ${previewUrl ? "text-green-600" : "text-red-500"}`}
+                  >
                     {previewUrl ? "Uploaded" : "Required"}
                   </span>
                 </div>
               </div>
             </div>
-             {/* Submit Button */}
+
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading || !previewUrl}
@@ -425,4 +444,3 @@ const AddLivestock = () => {
 };
 
 export default AddLivestock;
-
