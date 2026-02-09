@@ -395,3 +395,34 @@ const AddLivestock = () => {
                 </div>
               </div>
             </div>
+             {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading || !previewUrl}
+              className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${
+                loading || !previewUrl
+                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                  : "bg-green-600 text-white hover:bg-green-700 active:scale-98"
+              }`}
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={24} />
+                  List Livestock
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default AddLivestock;
+
