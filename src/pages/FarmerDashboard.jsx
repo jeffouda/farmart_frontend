@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   LayoutGrid,
   Box,
@@ -10,23 +11,32 @@ import {
   Menu,
   X,
   MessageCircle,
+  Scale,
 } from "lucide-react";
 
 const FarmerDashboard = () => {
   // State to control the visibility of the sidebar on mobile
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
+  const { logout } = useAuth();
 
   const menuItems = [
     { name: "Dashboard", path: "/farmer-dashboard", icon: LayoutGrid },
     { name: "Inventory", path: "/farmer-dashboard/inventory", icon: Box },
     { name: "Negotiations", path: "/negotiations", icon: MessageCircle },
     { name: "Order", path: "/farmer-dashboard/orders", icon: ShoppingBag },
+    { name: "Disputes", path: "/farmer-dashboard/disputes", icon: Scale },
     { name: "Analytic", path: "/farmer-dashboard/analytics", icon: BarChart3 },
   ];
 
   // Helper to toggle the sidebar
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  // Handle logout
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/auth";
+  };
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC]">
@@ -100,13 +110,16 @@ const FarmerDashboard = () => {
         </nav>
 
         {/* Logout Button */}
-        <button className="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-red-500 mt-auto font-bold transition-colors">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-red-500 mt-auto font-bold transition-colors"
+        >
           <LogOut size={22} /> Logout
         </button>
       </aside>
 
       {/* 4. MAIN CONTENT AREA */}
-      <main className="flex-1 w-full overflow-x-hidden pt-20 lg:pt-0">
+      <main className="flex-1 w-full overflow-x-hidden pt-16 lg:pt-0">
         <div className="p-4 md:p-8 max-w-7xl mx-auto">
           {/* Sub-pages (Overview, Orders, etc.) render here */}
           <Outlet />

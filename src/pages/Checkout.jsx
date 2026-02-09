@@ -4,7 +4,7 @@ import { useNavigate, Link, useParams } from 'react-router-dom';
 import { clearCart } from '../redux/cartSlice';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
-import { ShoppingCart, MapPin, Phone, CreditCard, Truck, ArrowLeft, Check } from 'lucide-react';
+import { ShoppingCart, MapPin, Phone, CreditCard, Truck, ArrowLeft, Check, Loader2 } from 'lucide-react';
 
 const KENYAN_COUNTIES = [
   "Mombasa", "Kwale", "Kilifi", "Tana River", "Lamu", "Taita/Taveta",
@@ -23,9 +23,10 @@ const Checkout = () => {
   const { orderId } = useParams();
   const { items: cartItems, totalAmount } = useSelector(state => state.cart);
   
-  // For bargain orders, we'll use items from the order API
+  // State for bargain orders
   const [bargainOrder, setBargainOrder] = useState(null);
   const [loadingOrder, setLoadingOrder] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   
   // Use bargain order items if available, otherwise use cart items
   const items = bargainOrder?.items || cartItems;
@@ -41,7 +42,7 @@ const Checkout = () => {
     setLoadingOrder(true);
     try {
       const response = await api.get(`/orders/${orderId}`);
-      console.log("Fetched order:", response.data);
+      console.log("🏷️ Fetched bargain order:", response.data);
       
       // Security check: Redirect if order is already paid
       if (response.data.status === 'paid' || response.data.status === 'completed') {
@@ -78,10 +79,21 @@ const Checkout = () => {
   const shippingCost = total > 50000 ? 0 : 1500;
   const grandTotal = total + shippingCost;
 
+  // Redirect to marketplace if cart is empty (not a bargain order)
+  useEffect(() => {
+    if (!orderId && cartItems.length === 0 && !loadingOrder) {
+      toast.error('Your cart is empty');
+      navigate('/marketplace');
+    }
+  }, [cartItems, orderId, loadingOrder, navigate]);
+
   if (loadingOrder) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-green-600 animate-spin mx-auto mb-4" />
+          <p className="text-slate-600 font-medium">Loading order details...</p>
+        </div>
       </div>
     );
   }
@@ -101,7 +113,7 @@ const Checkout = () => {
           </p>
           <Link
             to={bargainOrder ? '/dashboard/orders' : '/marketplace'}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors">
+            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
             <ArrowLeft size={20} />
             {bargainOrder ? 'Back to Orders' : 'Browse Marketplace'}
           </Link>
@@ -156,32 +168,27 @@ const Checkout = () => {
 
   const handlePlaceOrder = async () => {
     if (!validateForm()) {
+      toast.error('Please fill in all required fields correctly');
       return;
     }
 
-    const { paymentMethod } = formData;
-    const loadingMessage = paymentMethod === 'mpesa' 
-      ? "Simulating M-Pesa STK Push... Check your phone"
-      : "Placing Cash on Delivery Order...";
-    const successMessage = paymentMethod === 'mpesa'
-      ? "Payment Received! Order Placed."
-      : "Order Placed! Pay on delivery.";
-    const orderStatus = paymentMethod === 'mpesa' ? "paid" : "pending";
-
-    // Show loading toast
-    const loadingToast = toast.loading(loadingMessage);
+    setSubmitting(true);
+    const loadingToastId = toast.loading('Processing your order...');
 
     try {
-      let orderId;
+      // Build shipping address
+      const shippingAddress = `${formData.town}, ${formData.county}${formData.instructions ? '. Instructions: ' + formData.instructions : ''}`;
       
+      let orderId;
+
       if (bargainOrder) {
         // For bargain orders, update the existing order's status via API
         await api.put(`/orders/${bargainOrder.id}`, {
-          status: orderStatus,
-          payment_method: paymentMethod
+          status: 'paid',
+          payment_method: formData.paymentMethod
         });
         orderId = bargainOrder.id;
-        console.log("Bargain order updated:", orderId);
+        console.log("🏷️ Bargain order updated:", orderId);
       } else {
         // For cart orders, create a new order on backend
         const response = await api.post('/orders/', {
@@ -192,29 +199,33 @@ const Checkout = () => {
             quantity: item.quantity || 1
           })),
           total_amount: grandTotal,
-          status: orderStatus,
-          payment_method: paymentMethod
+          payment_method: formData.paymentMethod
         });
         
         orderId = response.data.order.id;
-        console.log("New order created:", orderId);
+        console.log("🆕 New order created:", orderId);
       }
 
       // Clear cart (only for cart orders)
       if (!bargainOrder) {
         dispatch(clearCart());
+        console.log("🛒 Cart cleared");
       }
 
       // Show success message
-      toast.dismiss(loadingToast);
-      toast.success(successMessage);
+      toast.dismiss(loadingToastId);
+      toast.success('Order placed successfully! 🎉');
 
-      // Redirect to orders page
-      navigate('/dashboard/orders');
+      // Redirect to order confirmation or orders page
+      navigate(`/order-confirmation/${orderId}`);
     } catch (error) {
-      console.error("Failed to process order:", error);
-      toast.dismiss(loadingToast);
-      toast.error('Failed to place order. Please try again.');
+      console.error("❌ Failed to process order:", error);
+      toast.dismiss(loadingToastId);
+      
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || 'Failed to place order. Please try again.';
+      toast.error(errorMessage);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -229,7 +240,7 @@ const Checkout = () => {
             <span className="font-medium">{bargainOrder ? 'Back to Orders' : 'Back to Cart'}</span>
           </Link>
           <h1 className="text-2xl font-bold text-slate-900">
-            {bargainOrder ? 'Checkout' : 'Checkout'}
+            {bargainOrder ? 'Complete Payment' : 'Checkout'}
           </h1>
         </div>
 
@@ -240,44 +251,47 @@ const Checkout = () => {
               {/* Contact Info */}
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <Phone size={20} className="text-primary" />
+                  <Phone size={20} className="text-green-600" />
                   <h2 className="text-lg font-bold text-slate-900">Contact Information</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
                     <input
                       type="text"
                       name="fullName"
                       value={formData.fullName}
                       onChange={handleChange}
-                      className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${errors.fullName ? 'border-red-500' : 'border-slate-300'}`}
+                      className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${errors.fullName ? 'border-red-500' : 'border-slate-300'}`}
                       placeholder="John Kamau"
+                      disabled={submitting}
                     />
                     {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
                     <input
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
-                      className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${errors.email ? 'border-red-500' : 'border-slate-300'}`}
+                      className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${errors.email ? 'border-red-500' : 'border-slate-300'}`}
                       placeholder="john@example.com"
+                      disabled={submitting}
                     />
                     {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number *</label>
                     <input
                       type="tel"
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
                       maxLength={13}
-                      className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${errors.phone ? 'border-red-500' : 'border-slate-300'}`}
+                      className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${errors.phone ? 'border-red-500' : 'border-slate-300'}`}
                       placeholder="07X or +254"
+                      disabled={submitting}
                     />
                     {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                   </div>
@@ -287,17 +301,18 @@ const Checkout = () => {
               {/* Delivery Details */}
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <Truck size={20} className="text-primary" />
+                  <Truck size={20} className="text-green-600" />
                   <h2 className="text-lg font-bold text-slate-900">Delivery Details</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">County</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">County *</label>
                     <select
                       name="county"
                       value={formData.county}
                       onChange={handleChange}
-                      className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${errors.county ? 'border-red-500' : 'border-slate-300'}`}>
+                      className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${errors.county ? 'border-red-500' : 'border-slate-300'}`}
+                      disabled={submitting}>
                       <option value="">Select County</option>
                       {KENYAN_COUNTIES.map(county => (
                         <option key={county} value={county}>{county}</option>
@@ -306,14 +321,15 @@ const Checkout = () => {
                     {errors.county && <p className="text-red-500 text-xs mt-1">{errors.county}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Town/Location</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Town/Location *</label>
                     <input
                       type="text"
                       name="town"
                       value={formData.town}
                       onChange={handleChange}
-                      className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary ${errors.town ? 'border-red-500' : 'border-slate-300'}`}
+                      className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${errors.town ? 'border-red-500' : 'border-slate-300'}`}
                       placeholder="e.g., Nakuru Town"
+                      disabled={submitting}
                     />
                     {errors.town && <p className="text-red-500 text-xs mt-1">{errors.town}</p>}
                   </div>
@@ -324,8 +340,9 @@ const Checkout = () => {
                       value={formData.instructions}
                       onChange={handleChange}
                       rows={3}
-                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                       placeholder="Any specific instructions for delivery..."
+                      disabled={submitting}
                     />
                   </div>
                 </div>
@@ -334,7 +351,7 @@ const Checkout = () => {
               {/* Payment Method */}
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <CreditCard size={20} className="text-primary" />
+                  <CreditCard size={20} className="text-green-600" />
                   <h2 className="text-lg font-bold text-slate-900">Payment Method</h2>
                 </div>
                 <div className="space-y-3">
@@ -346,6 +363,7 @@ const Checkout = () => {
                       checked={formData.paymentMethod === 'mpesa'}
                       onChange={handleChange}
                       className="text-green-600 focus:ring-green-500"
+                      disabled={submitting}
                     />
                     <div className="flex-1">
                       <p className="font-medium text-slate-900">M-Pesa</p>
@@ -361,6 +379,7 @@ const Checkout = () => {
                       checked={formData.paymentMethod === 'cod'}
                       onChange={handleChange}
                       className="text-green-600 focus:ring-green-500"
+                      disabled={submitting}
                     />
                     <div className="flex-1">
                       <p className="font-medium text-slate-900">Cash on Delivery</p>
@@ -381,7 +400,7 @@ const Checkout = () => {
                 
                 {bargainOrder && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-                    <p className="text-sm text-green-700 font-medium">Bargain Order</p>
+                    <p className="text-sm text-green-700 font-medium">🏷️ Bargain Order</p>
                     <p className="text-xs text-green-600">Order #{bargainOrder.id?.slice(0, 8)}</p>
                   </div>
                 )}
@@ -412,7 +431,7 @@ const Checkout = () => {
                 <div className="border-t pt-4 space-y-2">
                   <div className="flex justify-between text-slate-600">
                     <span>Subtotal</span>
-                    <span>{formatPrice(totalAmount)}</span>
+                    <span>{formatPrice(total)}</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>Shipping</span>
@@ -430,9 +449,19 @@ const Checkout = () => {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  className="w-full mt-6 py-4 bg-green-600 text-white font-black uppercase text-sm tracking-wider rounded-xl hover:bg-green-500 transition-all active:scale-95 shadow-lg shadow-green-600/20 flex items-center justify-center gap-2">
-                  <Check size={20} />
-                  Place Order
+                  disabled={submitting}
+                  className="w-full mt-6 py-4 bg-green-600 text-white font-black uppercase text-sm tracking-wider rounded-xl hover:bg-green-500 transition-all active:scale-95 shadow-lg shadow-green-600/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                  {submitting ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={20} />
+                      Place Order
+                    </>
+                  )}
                 </button>
 
                 <p className="text-xs text-slate-500 text-center mt-4">

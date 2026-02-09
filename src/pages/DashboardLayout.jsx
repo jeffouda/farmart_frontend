@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   LayoutGrid,
   Box,
@@ -14,6 +15,14 @@ import {
 const FarmerDashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    // Force full page reload to clear all cached state
+    window.location.href = "/auth";
+  };
 
   const menuItems = [
     { name: "Dashboard", path: "/farmer-dashboard", icon: LayoutGrid },
@@ -86,14 +95,18 @@ const FarmerDashboard = () => {
           })}
         </nav>
 
-        <button className="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-red-500 mt-auto transition-colors">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-4 px-4 py-3 text-slate-400 hover:text-red-500 mt-auto transition-colors"
+        >
           <LogOut size={22} />
           <span className="text-[15px]">Logout</span>
         </button>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-4 md:p-8 pt-20 lg:pt-8 w-full overflow-x-hidden">
+      {/* Mobile: pt-16 to account for fixed header. Desktop: pt-0 since sidebar has its own positioning */}
+      <main className="flex-1 p-4 md:p-8 pt-16 lg:pt-0 w-full overflow-x-hidden">
         <div className="max-w-6xl mx-auto">
           <Outlet />
         </div>

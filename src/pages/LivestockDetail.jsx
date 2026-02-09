@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "../redux/cartSlice";
-import { addToWishlist, removeFromWishlist } from "../redux/wishlistSlice";
+import { addToWishlist, removeFromWishlist, optimisticRemoveFromWishlist } from "../redux/wishlistSlice";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import api from "../api/axios";
@@ -17,48 +17,13 @@ import {
   ArrowLeft,
   Star,
   ShoppingCart,
-  MessageCircle
+  MessageCircle,
+  Flag
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
-// Mock Data - Single Animal Detail
-const ANIMAL_DATA = {
-  id: 1,
-  title: "Boran Bull - Premium Grade",
-  price: 185000,
-  breed: "Boran",
-  type: "Cattle",
-  weight: "450kg",
-  age: "3.5 Years",
-  gender: "Male",
-  location: "Nakuru, Njoro Farm",
-  farmer: {
-    name: "James Kimani",
-    rating: 4.8,
-    verified: true,
-    avatar: "JK"
-  },
-  healthHistory: "Fully vaccinated against FMD. Dewormed last month. Grazing on organic pasture.",
-  images: [
-    {
-      url: "https://images.unsplash.com/photo-1546445317-29f4545e9d53?auto=format&fit=crop&q=80",
-      alt: "Front view"
-    },
-    {
-      url: "https://images.unsplash.com/photo-1570042225831-d98fa7577f1e?auto=format&fit=crop&q=80",
-      alt: "Side view"
-    },
-    {
-      url: "https://images.unsplash.com/photo-1484557985045-edf25e08da73?auto=format&fit=crop&q=80",
-      alt: "Grazing"
-    },
-    {
-      url: "https://images.unsplash.com/photo-1604842247038-08c761d7a4d2?auto=format&fit=crop&q=80",
-      alt: "Close up"
-    }
-  ]
-};
+const PLACEHOLDER_IMAGE = "https://placehold.co/600x400?text=No+Image";
 
 function LivestockDetail() {
   const { id } = useParams();
@@ -66,62 +31,147 @@ function LivestockDetail() {
   const dispatch = useDispatch();
   const { currentUser } = useAuth();
   const [selectedImage, setSelectedImage] = useState(0);
+  const [animal, setAnimal] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   const wishlistItems = useSelector(state => state.wishlist.items);
-  
-  // Safety: Handle string vs number ID comparison
-  const numericId = parseInt(id, 10);
-  
-  // In production, this would fetch from API
-  // For now, we use static data but with proper safety checks
-  const animal = ANIMAL_DATA;
-  
-  // Safety Guard: Check if animal data is valid
-  if (!animal || !animal.id) {
+
+  // Fetch animal data from API
+  useEffect(() => {
+    const fetchAnimal = async () => {
+      try {
+        setError(null);
+        const response = await api.get(`/livestock/${id}`);
+        const resData = response.data;
+        
+        // Verification logging
+        console.group("🦄 LIVESTOCK DETAIL API VERIFICATION");
+        console.log("Source URL:", `/livestock/${id}`);
+        console.log("HTTP Status:", response.status);
+        console.log("Raw Data:", resData);
+        console.groupEnd();
+
+        // Map API response to expected structure
+        const formattedAnimal = {
+          id: resData.id,
+          title: `${resData.species} - ${resData.breed}`,
+          price: resData.price,
+          breed: resData.breed,
+          species: resData.species,
+          weight: resData.weight,
+          age: resData.age,
+          gender: resData.gender,
+          location: resData.location || "Unknown",
+          healthHistory: resData.health_history || "No health history available",
+          farmer_id: resData.farmer_id,
+          farmer: {
+            name: resData.farmer_name || resData.farmer?.name || "Unknown Farmer",
+            id: resData.farmer_id,
+            rating: resData.average_rating || resData.farmer?.average_rating || 0,
+            verified: resData.is_verified || false,
+            avatar: (resData.farmer_name || "U").substring(0, 2).toUpperCase()
+          },
+          image: resData.image_url || resData.image || PLACEHOLDER_IMAGE,
+          images: resData.images || [
+            { url: resData.image_url || resData.image || PLACEHOLDER_IMAGE, alt: "Main image" }
+          ],
+          // Keep original data
+          ...resData
+        };
+        
+        setAnimal(formattedAnimal);
+      } catch (error) {
+        console.error("Failed to fetch animal:", error);
+        setError("Failed to load animal details. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnimal();
+  }, [id]);
+
+  // Safety: Check if animal data is valid
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl font-semibold text-slate-600">Loading Product Details...</div>
+      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium">Loading animal details...</p>
+        </div>
       </div>
     );
   }
-  
-  const isInWishlist = wishlistItems.some(item => item.id === animal.id);
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 text-red-300 mx-auto mb-4">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <p className="text-red-600 font-medium mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!animal) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+        <div className="text-xl font-semibold text-slate-600">Animal not found</div>
+      </div>
+    );
+  }
+
+  const isInWishlist = wishlistItems.some(item => 
+    String(item.animal?.id) === String(animal.id) || String(item.animal_id) === String(animal.id)
+  );
 
   const handleContactFarmer = () => {
-    // In production, this would open phone/WhatsApp
-    window.open(`tel:+254700000000`, "_self");
+    // Open phone/WhatsApp with farmer's contact if available
+    if (animal.farmer?.phone) {
+      window.open(`tel:${animal.farmer.phone}`, "_self");
+    } else {
+      window.open(`tel:+254700000000`, "_self");
+    }
   };
 
   const handleAddToCart = () => {
-    // 🔒 Security Check: Require authentication
+    // Security Check: Require authentication
     if (!currentUser) {
       navigate('/auth', { state: { from: location.pathname, message: "Please login to add items to cart" } });
       return;
     }
     
-    // Safety: Ensure animal exists before dispatch
-    if (!animal) return;
-    
     dispatch(addToCart({
       id: animal.id,
       name: animal.title,
       price: animal.price,
-      image: animal.images?.[0]?.url || ""
+      image: animal.image
     }));
     toast.success(`${animal.title} added to cart!`);
   };
 
   const handleToggleWishlist = async () => {
-    // 🔒 Security Check: Require authentication
+    // Security Check: Require authentication
     if (!currentUser) {
       navigate('/auth', { state: { from: location.pathname, message: "Please login to save items" } });
       return;
     }
     
-    // Safety: Ensure animal exists before dispatch
-    if (!animal) return;
-    
     if (isInWishlist) {
+      // Optimistic removal for instant UI feedback
+      dispatch(optimisticRemoveFromWishlist(animal.id));
       try {
         await dispatch(removeFromWishlist(animal.id)).unwrap();
         toast.success(`${animal.title} removed from wishlist`);
@@ -142,7 +192,7 @@ function LivestockDetail() {
 
   // Handle Make Offer - Starts a negotiation bargain
   const handleMakeOffer = async () => {
-    // 🔒 Security Check: Require authentication
+    // Security Check: Require authentication
     if (!currentUser) {
       navigate('/auth', { state: { from: location.pathname, message: "Please login to make an offer" } });
       return;
@@ -195,8 +245,8 @@ function LivestockDetail() {
             {/* Main Image */}
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-white shadow-sm">
               <img
-                src={animal.images?.[selectedImage]?.url || ""}
-                alt={animal.images?.[selectedImage]?.alt || "Animal image"}
+                src={animal.images?.[selectedImage]?.url || animal.image || PLACEHOLDER_IMAGE}
+                alt={animal.title || "Animal image"}
                 className="w-full h-full object-cover"
               />
               <button 
@@ -212,22 +262,24 @@ function LivestockDetail() {
             </div>
 
             {/* Thumbnails */}
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {animal.images?.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImage(index)}
-                  className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
-                    selectedImage === index ? "border-green-600 ring-2 ring-green-600/20" : "border-transparent"
-                  }`}>
-                  <img
-                    src={image.url}
-                    alt={image.alt}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
+            {animal.images?.length > 1 && (
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {animal.images.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImage(index)}
+                    className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                      selectedImage === index ? "border-green-600 ring-2 ring-green-600/20" : "border-transparent"
+                    }`}>
+                    <img
+                      src={image.url || PLACEHOLDER_IMAGE}
+                      alt={image.alt || `Image ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Right Column - Info & Actions */}
@@ -254,12 +306,12 @@ function LivestockDetail() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-white rounded-xl p-4 text-center shadow-sm border border-slate-100">
                 <Scale className="w-6 h-6 mx-auto mb-2 text-green-600" />
-                <p className="text-lg font-bold text-slate-900">{animal.weight}</p>
+                <p className="text-lg font-bold text-slate-900">{animal.weight}kg</p>
                 <p className="text-xs text-slate-500 uppercase tracking-wider">Weight</p>
               </div>
               <div className="bg-white rounded-xl p-4 text-center shadow-sm border border-slate-100">
                 <Calendar className="w-6 h-6 mx-auto mb-2 text-green-600" />
-                <p className="text-lg font-bold text-slate-900">{animal.age}</p>
+                <p className="text-lg font-bold text-slate-900">{animal.age ? `${Math.floor(animal.age / 12)} years` : "Unknown"}</p>
                 <p className="text-xs text-slate-500 uppercase tracking-wider">Age</p>
               </div>
               <div className="bg-white rounded-xl p-4 text-center shadow-sm border border-slate-100">
@@ -293,11 +345,21 @@ function LivestockDetail() {
                     <span className="text-slate-400 text-sm">rating</span>
                   </div>
                 </div>
-                <button 
-                  onClick={() => navigate(`/profile/${animal.farmer?.name?.toLowerCase().replace(" ", "-") || "unknown"}`)}
-                  className="px-4 py-2 text-sm font-bold text-green-600 uppercase tracking-wider hover:text-green-500 transition-colors">
-                  View Profile
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => navigate(`/dispute/new?targetId=${animal.farmer?.id || ''}&type=user&context=livestock&ref=${animal.id}`)}
+                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Report this user"
+                  >
+                    <Flag size={16} />
+                  </button>
+                  <button 
+                    onClick={() => navigate(`/profile/${animal.farmer?.name?.toLowerCase().replace(/\\s+/g, "-") || "unknown"}`)}
+                    className="px-4 py-2 text-sm font-bold text-green-600 uppercase tracking-wider hover:text-green-500 transition-colors"
+                  >
+                    View Profile
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -344,6 +406,11 @@ function LivestockDetail() {
                 <strong>FarmArt Guarantee:</strong> All verified sellers undergo strict vetting. 
                 Payments are held in escrow until livestock is safely delivered.
               </p>
+            </div>
+
+            {/* Data Source Indicator */}
+            <div className="text-center py-2 text-xs text-slate-400">
+              Data Source: Live API ✅
             </div>
           </div>
         </div>
