@@ -114,3 +114,30 @@ function Header() {
                 </div>
               ))}
             </div>
+
+                        <div className="h-[1px] w-full bg-slate-100 my-10" />
+
+            <div className="relative p-8 rounded-3xl bg-green-50 border-l-8 border-green-600 mb-10 shadow-sm">
+              <p className="text-slate-800 leading-relaxed font-bold italic text-lg">
+                "We are building the bridge between the ranch and the market.
+                Our mission is to empower farmers with fair pricing and buyers
+                with healthy, traceable livestock through a modern digital
+                ecosystem."
+              </p>
+            </div>
+
+            <button className="group flex items-center gap-4 bg-green-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-green-500 transition-all shadow-xl shadow-green-900/20 active:scale-95">
+              Our Process
+              <ArrowRight
+                className="group-hover:translate-x-2 transition-transform"
+                size={18}
+              />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
+export default Header;
