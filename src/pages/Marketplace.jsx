@@ -55,7 +55,7 @@ function Marketplace() {
         if (selectedLocation) params.append('location', selectedLocation);
         params.append('sort', sortBy);
 
-        const response = await api.get(/livestock?${params.toString()});
+        const response = await api.get(`/livestock?${params.toString()}`);
         setLivestock(response.data.animals || response.data || []);
       } catch (error) {
         console.error('Failed to fetch livestock:', error);
@@ -87,7 +87,7 @@ function Marketplace() {
     if (item) {
       dispatch(addToCart({
         id: item.id,
-        name: ${item.species} - ${item.breed},
+        name: `${item.species} - ${item.breed}`,
         price: item.price,
         image: item.image_url || item.image
       }));
@@ -314,5 +314,140 @@ function Marketplace() {
               </button>
             </div>
           )}
+
+          {/* Livestock Grid */}
+          {!loading && !error && livestock.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              {livestock.map((animal) => (
+                <LivestockCard
+                  key={animal.id}
+                  animal={{
+                    id: animal.id,
+                    breed: animal.breed,
+                    species: animal.species,
+                    price: animal.price,
+                    image_url: animal.image_url || animal.image,
+                    location: animal.location,
+                    age: animal.age,
+                    weight: animal.weight
+                  }}
+                  onAddToCart={handleAddToCart}
+                  onToggleWishlist={handleToggleWishlist}
+                />
+              ))}
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Mobile Filter Modal */}
+      {mobileFiltersOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileFiltersOpen(false)}
+          />
+          <div className="absolute right-0 top-0 h-full w-80 bg-white p-5 overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-slate-900">Filters</h2>
+              <button
+                onClick={() => setMobileFiltersOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Category */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Category</h3>
+              <div className="space-y-2">
+                {ANIMAL_TYPES.map((type) => (
+                  <label key={type} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedCategories.includes(type)}
+                      onChange={() => handleCategoryToggle(type)}
+                      className="w-4 h-4 rounded border-gray-300 text-green-600"
+                    />
+                    <span className="text-sm text-slate-600">{type}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Price */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Price Range (KES)</h3>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={priceRange.min}
+                  onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm"
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={priceRange.max}
+                  onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Location */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Location</h3>
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm"
+              >
+                <option value="">All Locations</option>
+                {LOCATIONS.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sort */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Sort By</h3>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm"
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={clearFilters}
+                className="flex-1 py-3 bg-gray-100 text-slate-700 rounded-lg font-medium"
+              >
+                Clear All
+              </button>
+              <button
+                onClick={() => setMobileFiltersOpen(false)}
+                className="flex-1 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default Marketplace;
 
 
