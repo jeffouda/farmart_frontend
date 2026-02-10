@@ -127,7 +127,17 @@ function Negotiation() {
               Asking: KES {livestock?.price?.toLocaleString() || '0'}
             </p>
           </div>
-
+ {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <button className="p-2 hover:bg-green-700 rounded-full transition-colors">
+              <Phone size={20} />
+            </button>
+            <button className="p-2 hover:bg-green-700 rounded-full transition-colors">
+              <Video size={20} />
+            </button>
+          </div>
+        </div>
+      </div>
 
 
 
