@@ -87,7 +87,9 @@ const SignUp = () => {
           const userRole = loggedInUser.user?.role || loggedInUser.role || '';
           const cleanRole = userRole.toLowerCase();
           
-          if (cleanRole === 'farmer') {
+          if (cleanRole === 'admin') {
+            window.location.href = '/admin';
+          } else if (cleanRole === 'farmer') {
             window.location.href = '/farmer-dashboard';
           } else {
             window.location.href = '/dashboard';

@@ -53,7 +53,7 @@ const Wishlist = () => {
           <h2 className="text-2xl font-bold text-slate-800 mb-2">Your wishlist is empty</h2>
           <p className="text-slate-500 mb-6">Save items you want to watch here</p>
           <Link
-            to="/marketplace"
+            to="/browse"
             className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
             Browse Livestock
           </Link>
@@ -67,10 +67,10 @@ const Wishlist = () => {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
           <Link
-            to="/marketplace"
+            to="/browse"
             className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors">
             <ArrowLeft size={20} />
-            <span className="font-medium">Back to Marketplace</span>
+            <span className="font-medium">Back to Browse</span>
           </Link>
           <h1 className="text-2xl font-bold text-slate-900">My Saved Items</h1>
           <span className="px-3 py-1 bg-slate-200 text-slate-700 rounded-full text-sm font-medium">

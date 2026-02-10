@@ -14,8 +14,7 @@ import MainLayout from "./layouts/MainLayout";
 import Home from "./pages/Home";
 import SignUp from "./pages/SignUp";
 import BrowseLivestock from "./pages/BrowseLivestock";
-import Marketplace from "./pages/Marketplace";
-import LivestockDetail from "./pages/LivestockDetail";
+import LivestockDetails from "./pages/LivestockDetails";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
@@ -23,6 +22,7 @@ import Wishlist from "./pages/Wishlist";
 import Unauthorized from "./pages/Unauthorized";
 import NegotiationList from "./pages/NegotiationList";
 import NegotiationRoom from "./pages/NegotiationRoom";
+import Negotiation from "./pages/Negotiation";
 import RaiseDispute from "./pages/RaiseDispute";
 
 // Buyer Dashboard Components
@@ -82,8 +82,7 @@ function App() {
           <Route path="/auth" element={<SignUp />} />
           <Route path="/login" element={<SignUp />} />
           <Route path="/browse" element={<BrowseLivestock />} />
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/livestock/:id" element={<LivestockDetail />} />
+          <Route path="/livestock/:id" element={<LivestockDetails />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/checkout/:orderId" element={<Checkout />} />
@@ -92,6 +91,7 @@ function App() {
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="/negotiations" element={<NegotiationList />} />
           <Route path="/negotiations/:id" element={<NegotiationRoom />} />
+          <Route path="/negotiation/:livestockId/:receiverId" element={<Negotiation />} />
           <Route path="/dispute/:orderId" element={<RaiseDispute />} />
           <Route path="/dispute/new" element={<RaiseDispute />} />
         </Route>

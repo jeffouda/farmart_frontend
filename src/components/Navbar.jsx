@@ -30,7 +30,6 @@ function Navbar() {
 
   const navLinks = [
     { name: "Browse Livestock", path: "/browse" },
-    { name: "Marketplace", path: "/marketplace" },
     {
       name: "Sell",
       path: currentUser ? "/sell" : "#",

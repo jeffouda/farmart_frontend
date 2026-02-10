@@ -1,561 +1,449 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Search, Heart, MapPin, Filter, Star, ShoppingCart, MessageCircle } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
-import { addToCart } from "../redux/cartSlice";
-import { fetchWishlist, addToWishlist, removeFromWishlist, optimisticRemoveFromWishlist } from "../redux/wishlistSlice";
-import { useAuth } from "../context/AuthContext";
-import BargainModal from "../components/BargainModal";
-import toast from "react-hot-toast";
-import api from "../api/axios";
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Filter, X } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { addToCart } from '../redux/cartSlice';
+import { addToWishlist, removeFromWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
+import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import api from '../api/axios';
+import LivestockCard from '../components/LivestockCard';
 
-const ANIMAL_TYPES = ["Cow", "Goat", "Sheep", "Chicken", "Pig"];
-const LOCATIONS = ["Nakuru", "Kiambu", "Narok", "Kajiado", "Nairobi", "Eldoret", "Kisumu", "Marsabit"];
-const PLACEHOLDER_IMAGE = "https://placehold.co/400x300?text=No+Image";
-
-// Helper function to get image URL with fallback
-const getImageUrl = (item) => {
-  return item.image_url || item.image || PLACEHOLDER_IMAGE;
-};
-
-// Helper to format API data to match component's expected structure
-const formatLivestockItem = (item) => ({
-  id: item.id,
-  title: `${item.species} - ${item.breed}`,
-  price: item.price,
-  location: item.location || "Unknown",
-  type: item.species,
-  breed: item.breed,
-  weight: `${item.weight}kg`,
-  age: item.age ? `${Math.floor(item.age / 12)} years` : "Unknown",
-  image: getImageUrl(item),
-  farmer: { 
-    name: item.farmer_name || "Unknown Farmer", 
-    avatar: (item.farmer_name || "U").substring(0, 2).toUpperCase() 
-  },
-  rating: item.average_rating || 4.5,
-  verified: item.is_verified || true,
-  // Keep original data for bargain modal
-  ...item
-});
+const ANIMAL_TYPES = ['Cattle', 'Goats', 'Sheep', 'Chicken', 'Pig'];
+const LOCATIONS = [
+  'Nairobi City', 'Kiambu', 'Nakuru', 'Kisumu', 'Eldoret',
+  'Mombasa', 'Narok', 'Kajiado', 'Thika', 'Machakos'
+];
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'price_low', label: 'Price: Low to High' },
+  { value: 'price_high', label: 'Price: High to Low' },
+];
 
 function Marketplace() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTypes, setSelectedTypes] = useState([]);
-  const [priceRange, setPriceRange] = useState({ min: "", max: "" });
-  const [selectedLocations, setSelectedLocations] = useState([]);
-  const [healthVerifiedOnly, setHealthVerifiedOnly] = useState(false);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [selectedAnimal, setSelectedAnimal] = useState(null);
-  const [livestockData, setLivestockData] = useState([]);
+  const wishlistItems = useSelector(state => state.wishlist.items);
+
+  // State
+  const [livestock, setLivestock] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
 
   // Fetch livestock from API
   useEffect(() => {
     const fetchLivestock = async () => {
       try {
+        setLoading(true);
         setError(null);
-        const response = await api.get('/livestock/all');
-        
-        // Verification logging for API data confirmation
-        console.group("🦄 API DATA VERIFICATION");
-        console.log("Source URL:", "/api/livestock/all");
-        console.log("HTTP Status:", response.status);
-        console.log("Raw Data Count:", response.data.animals?.length || 0);
-        console.log("Sample Item (ID 1):", response.data.animals?.[0]);
-        console.groupEnd();
-        
-        setLivestockData(response.data.animals || []);
+
+        // Build query params
+        const params = new URLSearchParams();
+        if (searchQuery) params.append('search', searchQuery);
+        if (selectedCategories.length > 0) params.append('species', selectedCategories.join(','));
+        if (priceRange.min) params.append('min_price', priceRange.min);
+        if (priceRange.max) params.append('max_price', priceRange.max);
+        if (selectedLocation) params.append('location', selectedLocation);
+        params.append('sort', sortBy);
+
+        const response = await api.get(`/livestock?${params.toString()}`);
+        setLivestock(response.data.animals || response.data || []);
       } catch (error) {
-        console.error("Failed to fetch livestock:", error);
-        setError("Failed to load livestock. Please try again.");
-        setLivestockData([]);
+        console.error('Failed to fetch livestock:', error);
+        setError('Failed to load livestock. Please try again.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchLivestock();
-  }, []);
+  }, [searchQuery, selectedCategories, priceRange, selectedLocation, sortBy]);
 
-  const wishlistItems = useSelector(state => state.wishlist.items);
-
+  // Check if item is in wishlist
   const isInWishlist = (id) => {
-    const searchId = String(id);
-    return wishlistItems.some(item => 
-      String(item.animal?.id) === searchId || String(item.animal_id) === searchId
+    return wishlistItems.some(item =>
+      String(item.animal?.id) === String(id) || String(item.animal_id) === String(id)
     );
   };
 
-  const handleToggleWishlist = async (product, e) => {
-    e.stopPropagation();
-    
-    // Security Check: Require authentication
+  // Handle add to cart
+  const handleAddToCart = (id) => {
     if (!currentUser) {
-      toast((t) => (
-        <div className="flex items-center gap-3">
-          <p className="font-medium">Please login to save items</p>
-          <button 
-            onClick={() => { toast.dismiss(t.id); navigate('/auth'); }}
-            className="px-3 py-1 bg-green-600 text-white text-sm font-bold rounded-lg"
-          >
-            Login
-          </button>
-        </div>
-      ), { duration: 5000 });
+      toast.error('Please login to add items to cart');
+      navigate('/auth');
       return;
     }
 
-    const productId = product.id || product.animal?.id;
-    
-    if (isInWishlist(productId)) {
-      // Optimistic removal for instant UI feedback
-      dispatch(optimisticRemoveFromWishlist(productId));
-      try {
-        await dispatch(removeFromWishlist(productId)).unwrap();
-        toast.success(`${product.title} removed from wishlist`);
-      } catch (error) {
-        console.error("Remove from wishlist failed:", error);
-        toast.error("Failed to remove from wishlist. Please try again.");
-      }
+    const item = livestock.find(l => String(l.id) === String(id));
+    if (item) {
+      dispatch(addToCart({
+        id: item.id,
+        name: `${item.species} - ${item.breed}`,
+        price: item.price,
+        image: item.image_url || item.image
+      }));
+      toast.success('Added to cart!');
+    }
+  };
+
+  // Handle toggle wishlist
+  const handleToggleWishlist = (id) => {
+    if (!currentUser) {
+      toast.error('Please login to save items');
+      navigate('/auth');
+      return;
+    }
+
+    if (isInWishlist(id)) {
+      dispatch(optimisticRemoveFromWishlist(id));
+      dispatch(removeFromWishlist(id));
+      toast.success('Removed from wishlist');
     } else {
-      try {
-        await dispatch(addToWishlist(productId)).unwrap();
-        toast.success(`${product.title} added to wishlist!`);
-      } catch (error) {
-        console.error("Add to wishlist failed:", error);
-        toast.error("Failed to add to wishlist. Please try again.");
-      }
+      dispatch(addToWishlist(id));
+      toast.success('Added to wishlist!');
     }
   };
 
-  const handleAddToCart = (product) => {
-    // Security Check: Require authentication
-    if (!currentUser) {
-      toast((t) => (
-        <div className="flex items-center gap-3">
-          <p className="font-medium">Please login to add items to cart</p>
-          <button 
-            onClick={() => { toast.dismiss(t.id); navigate('/auth', { state: { from: location.pathname } }); }}
-            className="px-3 py-1 bg-green-600 text-white text-sm font-bold rounded-lg"
-          >
-            Login
-          </button>
-        </div>
-      ), { duration: 5000 });
-      return;
-    }
-    dispatch(addToCart({
-      id: product.id || product.animal?.id,
-      name: product.title,
-      price: product.price,
-      image: product.image
-    }));
-    toast.success(`${product.title} added to cart!`);
-  };
-
-  const handleTypeToggle = (type) => {
-    setSelectedTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+  // Toggle category checkbox
+  const handleCategoryToggle = (category) => {
+    setSelectedCategories(prev =>
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
     );
   };
 
-  const handleLocationToggle = (location) => {
-    setSelectedLocations((prev) =>
-      prev.includes(location) ? prev.filter((l) => l !== location) : [...prev, location]
-    );
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedCategories([]);
+    setPriceRange({ min: '', max: '' });
+    setSelectedLocation('');
+    setSortBy('newest');
   };
 
-  // Format API data for display
-  const allLivestock = useMemo(() => {
-    return livestockData.map(formatLivestockItem);
-  }, [livestockData]);
+  // Has active filters
+  const hasActiveFilters = selectedCategories.length > 0 || priceRange.min || priceRange.max || selectedLocation;
 
-  const filteredLivestock = allLivestock.filter((item) => {
-    const matchesSearch = (item.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.breed || "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = selectedTypes.length === 0 || selectedTypes.includes(item.type);
-    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(item.location);
-    const matchesMinPrice = !priceRange.min || item.price >= parseInt(priceRange.min);
-    const matchesMaxPrice = !priceRange.max || item.price <= parseInt(priceRange.max);
-    const matchesVerified = !healthVerifiedOnly || item.verified;
-    return matchesSearch && matchesType && matchesLocation && matchesMinPrice && matchesMaxPrice && matchesVerified;
-  });
-
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600 font-medium">Loading livestock...</p>
-        </div>
+  // Skeleton loader
+  const SkeletonCard = () => (
+    <div className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse">
+      <div className="h-48 bg-gray-200" />
+      <div className="p-4">
+        <div className="h-5 bg-gray-200 rounded w-3/4 mb-2" />
+        <div className="h-4 bg-gray-200 rounded w-1/2 mb-3" />
+        <div className="h-6 bg-gray-200 rounded w-1/3 mb-3" />
+        <div className="h-10 bg-gray-200 rounded" />
       </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 text-red-300 mx-auto mb-4">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <p className="text-red-600 font-medium mb-4">{error}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b sticky top-16 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+      <div className="bg-white shadow-sm sticky top-16 z-30">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">
-              Marketplace
-            </h1>
-            <div className="flex-1 max-w-xl relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <h1 className="text-2xl font-bold text-slate-900">Marketplace</h1>
+
+            {/* Search */}
+            <div className="flex-1 max-w-md relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search livestock..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-slate-100 rounded-xl font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
+
+            {/* Mobile Filter Button */}
             <button
               onClick={() => setMobileFiltersOpen(true)}
-              className="lg:hidden flex items-center gap-2 px-4 py-3 bg-slate-100 rounded-xl font-medium text-slate-700">
-              <Filter size={20} />
+              className="lg:hidden flex items-center gap-2 px-4 py-2.5 bg-gray-100 rounded-lg"
+            >
+              <Filter className="w-5 h-5" />
               Filters
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 flex gap-8">
-        {/* Sidebar - Desktop */}
+      <div className="max-w-7xl mx-auto px-4 py-6 flex gap-6">
+        {/* Sidebar - Desktop (25%) */}
         <aside className="hidden lg:block w-64 flex-shrink-0">
-          <div className="bg-white rounded-2xl p-6 shadow-sm sticky top-36">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-black text-slate-900 uppercase italic">Filters</h2>
-              {(selectedTypes.length > 0 || selectedLocations.length > 0 || healthVerifiedOnly) && (
+          <div className="bg-white rounded-xl p-5 shadow-sm sticky top-36">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-slate-900">Filters</h2>
+              {hasActiveFilters && (
                 <button
-                  onClick={() => {
-                    setSelectedTypes([]);
-                    setSelectedLocations([]);
-                    setPriceRange({ min: "", max: "" });
-                    setHealthVerifiedOnly(false);
-                  }}
-                  className="text-xs font-bold text-green-600 uppercase tracking-wider hover:text-green-500">
+                  onClick={clearFilters}
+                  className="text-sm text-green-600 hover:text-green-700"
+                >
                   Clear All
                 </button>
               )}
             </div>
 
-            {/* Animal Types */}
+            {/* Category Filter */}
             <div className="mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Animal Type</h3>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Category</h3>
               <div className="space-y-2">
                 {ANIMAL_TYPES.map((type) => (
-                  <label key={type} className="flex items-center gap-3 cursor-pointer group">
+                  <label key={type} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={selectedTypes.includes(type)}
-                      onChange={() => handleTypeToggle(type)}
-                      className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500"
+                      checked={selectedCategories.includes(type)}
+                      onChange={() => handleCategoryToggle(type)}
+                      className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
                     />
-                    <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900">{type}</span>
+                    <span className="text-sm text-slate-600">{type}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            {/* Price Range */}
+            {/* Price Range Filter */}
             <div className="mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Price Range</h3>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Price Range (KES)</h3>
               <div className="flex gap-2">
                 <input
                   type="number"
                   placeholder="Min"
                   value={priceRange.min}
                   onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
                 <input
                   type="number"
                   placeholder="Max"
                   value={priceRange.max}
                   onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
             </div>
 
-            {/* Location */}
+            {/* Location Filter */}
             <div className="mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Location</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {LOCATIONS.map((location) => (
-                  <label key={location} className="flex items-center gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={selectedLocations.includes(location)}
-                      onChange={() => handleLocationToggle(location)}
-                      className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500"
-                    />
-                    <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900">{location}</span>
-                  </label>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Location</h3>
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="">All Locations</option>
+                {LOCATIONS.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
                 ))}
-              </div>
+              </select>
             </div>
 
-            {/* Health Verified Toggle */}
-            <div className="pt-4 border-t border-slate-100">
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm font-medium text-slate-700">Health Verified Only</span>
-                <button
-                  onClick={() => setHealthVerifiedOnly(!healthVerifiedOnly)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    healthVerifiedOnly ? "bg-green-600" : "bg-slate-200"
-                  }`}>
-                  <span
-                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                      healthVerifiedOnly ? "translate-x-6" : ""
-                    }`}
-                  />
-                </button>
-              </label>
+            {/* Sort By */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Sort By</h3>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </div>
           </div>
         </aside>
 
-        {/* Main Grid */}
+        {/* Main Grid (75%) */}
         <main className="flex-1">
+          {/* Results count */}
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-500">
-              Showing <span className="font-bold text-slate-900">{filteredLivestock.length}</span> livestock
+            <p className="text-sm text-slate-500">
+              Showing <span className="font-semibold text-slate-900">{livestock.length}</span> animals
             </p>
           </div>
 
-          {filteredLivestock.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 text-center">
-              <MapPin className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-slate-900 mb-2">No livestock found</h3>
-              <p className="text-slate-500">Try adjusting your filters or search query</p>
+          {/* Loading State */}
+          {loading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <SkeletonCard key={i} />
+              ))}
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredLivestock.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow group">
-                  {/* Image */}
-                  <div className="relative aspect-[4/3] overflow-hidden">
-                    <img
-                      src={getImageUrl(item)}
-                      alt={item.title || "Livestock"}
-                      onError={(e) => {
-                        e.target.src = PLACEHOLDER_IMAGE;
-                      }}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <button
-                      onClick={(e) => handleToggleWishlist(item, e)}
-                      className={`absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full transition-colors ${
-                        isInWishlist(item.id)
-                          ? 'text-red-500'
-                          : 'text-slate-400 hover:text-red-500'
-                      }`}>
-                      <Heart size={18} fill={isInWishlist(item.id) ? "currentColor" : "none"} />
-                    </button>
-                    {item.verified && (
-                      <div className="absolute bottom-3 left-3 px-2 py-1 bg-green-600 text-white text-[10px] font-black uppercase tracking-wider rounded-lg">
-                        Verified
-                      </div>
-                    )}
-                  </div>
+          )}
 
-                  {/* Content */}
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="font-bold text-slate-900 leading-tight">{item.title}</h3>
-                    </div>
-                    <p className="text-xl font-black text-orange-500 mb-2">
-                      KES {item.price.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-slate-400 mb-3">
-                      {item.breed} • {item.weight} • {item.age}
-                    </p>
+          {/* Error State */}
+          {!loading && error && (
+            <div className="bg-white rounded-xl p-12 text-center">
+              <p className="text-red-600 mb-4">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
 
-                    {/* Farmer Info */}
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-[10px] font-bold text-green-700">
-                        {(item.farmer?.avatar || item.farmer?.name?.substring(0, 2) || "U").toUpperCase()}
-                      </div>
-                      <span className="text-xs font-medium text-slate-600">{item.farmer?.name || "Unknown"}</span>
-                      <div className="flex items-center gap-1 ml-auto text-yellow-500">
-                        <Star size={12} fill="currentColor" />
-                        <span className="text-xs font-bold">{item.rating || "N/A"}</span>
-                      </div>
-                    </div>
+          {/* Empty State */}
+          {!loading && !error && livestock.length === 0 && (
+            <div className="bg-white rounded-xl p-12 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Filter className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                No animals found matching your filters
+              </h3>
+              <p className="text-slate-500 mb-4">Try adjusting your filters or search query</p>
+              <button
+                onClick={clearFilters}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
 
-                    {/* Location */}
-                    <div className="flex items-center gap-1 text-xs text-slate-400 mb-4">
-                      <MapPin size={12} />
-                      <span>{item.location}</span>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setSelectedAnimal(item)}
-                        className="flex-1 py-3 bg-gradient-to-r from-orange-400 to-yellow-400 text-white font-black uppercase text-xs tracking-wider rounded-xl hover:from-orange-500 hover:to-yellow-500 transition-all active:scale-95 flex items-center justify-center gap-1">
-                        <MessageCircle size={16} />
-                        Make Offer
-                      </button>
-                      <Link
-                        to={`/livestock/${item.id}`}
-                        className="flex-1 py-3 text-center bg-slate-100 text-slate-700 font-black uppercase text-xs tracking-wider rounded-xl hover:bg-slate-200 transition-all active:scale-95">
-                        Details
-                      </Link>
-                      <button
-                        onClick={() => handleAddToCart(item)}
-                        className="px-3 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all active:scale-95 flex items-center justify-center">
-                        <ShoppingCart size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
+          {/* Livestock Grid */}
+          {!loading && !error && livestock.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              {livestock.map((animal) => (
+                <LivestockCard
+                  key={animal.id}
+                  animal={{
+                    id: animal.id,
+                    breed: animal.breed,
+                    species: animal.species,
+                    price: animal.price,
+                    image_url: animal.image_url || animal.image,
+                    location: animal.location,
+                    age: animal.age,
+                    weight: animal.weight
+                  }}
+                  onAddToCart={handleAddToCart}
+                  onToggleWishlist={handleToggleWishlist}
+                />
               ))}
             </div>
           )}
         </main>
       </div>
 
-      {/* Mobile Filter Drawer */}
+      {/* Mobile Filter Modal */}
       {mobileFiltersOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileFiltersOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-80 bg-white p-6 overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-black text-slate-900 uppercase italic">Filters</h2>
-              <button onClick={() => setMobileFiltersOpen(false)} className="p-2 text-slate-400">
-                ✕
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileFiltersOpen(false)}
+          />
+          <div className="absolute right-0 top-0 h-full w-80 bg-white p-5 overflow-y-auto">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-slate-900">Filters</h2>
+              <button
+                onClick={() => setMobileFiltersOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Animal Types */}
+            {/* Category */}
             <div className="mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Animal Type</h3>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Category</h3>
               <div className="space-y-2">
                 {ANIMAL_TYPES.map((type) => (
-                  <label key={type} className="flex items-center gap-3 cursor-pointer">
+                  <label key={type} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={selectedTypes.includes(type)}
-                      onChange={() => handleTypeToggle(type)}
-                      className="w-4 h-4 rounded border-slate-300 text-green-600"
+                      checked={selectedCategories.includes(type)}
+                      onChange={() => handleCategoryToggle(type)}
+                      className="w-4 h-4 rounded border-gray-300 text-green-600"
                     />
-                    <span className="text-sm font-medium text-slate-700">{type}</span>
+                    <span className="text-sm text-slate-600">{type}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            {/* Price Range */}
+            {/* Price */}
             <div className="mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Price Range</h3>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Price Range (KES)</h3>
               <div className="flex gap-2">
                 <input
                   type="number"
                   placeholder="Min"
                   value={priceRange.min}
                   onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm"
+                  className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm"
                 />
                 <input
                   type="number"
                   placeholder="Max"
                   value={priceRange.max}
                   onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm"
+                  className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm"
                 />
               </div>
             </div>
 
             {/* Location */}
             <div className="mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Location</h3>
-              <div className="space-y-2">
-                {LOCATIONS.map((location) => (
-                  <label key={location} className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedLocations.includes(location)}
-                      onChange={() => handleLocationToggle(location)}
-                      className="w-4 h-4 rounded border-slate-300 text-green-600"
-                    />
-                    <span className="text-sm font-medium text-slate-700">{location}</span>
-                  </label>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Location</h3>
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm"
+              >
+                <option value="">All Locations</option>
+                {LOCATIONS.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
                 ))}
-              </div>
+              </select>
             </div>
 
-            {/* Health Verified */}
+            {/* Sort */}
             <div className="mb-6">
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-sm font-medium text-slate-700">Health Verified Only</span>
-                <button
-                  onClick={() => setHealthVerifiedOnly(!healthVerifiedOnly)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    healthVerifiedOnly ? "bg-green-600" : "bg-slate-200"
-                  }`}>
-                  <span
-                    className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                      healthVerifiedOnly ? "translate-x-6" : ""
-                    }`}
-                  />
-                </button>
-              </label>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Sort By</h3>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm"
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </div>
 
-            <button
-              onClick={() => setMobileFiltersOpen(false)}
-              className="w-full py-4 bg-green-600 text-white font-black uppercase text-sm tracking-wider rounded-xl">
-              Apply Filters
-            </button>
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={clearFilters}
+                className="flex-1 py-3 bg-gray-100 text-slate-700 rounded-lg font-medium"
+              >
+                Clear All
+              </button>
+              <button
+                onClick={() => setMobileFiltersOpen(false)}
+                className="flex-1 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
+              >
+                Apply
+              </button>
+            </div>
           </div>
         </div>
       )}
-
-      {/* Make Offer Modal */}
-      <BargainModal 
-        animal={selectedAnimal} 
-        isOpen={!!selectedAnimal} 
-        onClose={() => setSelectedAnimal(null)} 
-      />
-
-      {/* Data Source Indicator */}
-      <div className="text-center py-4 text-xs text-slate-400">
-        Data Source: {livestockData.length > 0 ? "Live API Connected ✅" : "No Data / Loading ⏳"}
-      </div>
     </div>
   );
 }

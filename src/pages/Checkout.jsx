@@ -83,7 +83,7 @@ const Checkout = () => {
   useEffect(() => {
     if (!orderId && cartItems.length === 0 && !loadingOrder) {
       toast.error('Your cart is empty');
-      navigate('/marketplace');
+      navigate('/browse');
     }
   }, [cartItems, orderId, loadingOrder, navigate]);
 
@@ -112,7 +112,7 @@ const Checkout = () => {
               : 'Add some livestock to your cart before checking out.'}
           </p>
           <Link
-            to={bargainOrder ? '/dashboard/orders' : '/marketplace'}
+            to={bargainOrder ? '/dashboard/orders' : '/browse'}
             className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
             <ArrowLeft size={20} />
             {bargainOrder ? 'Back to Orders' : 'Browse Marketplace'}

@@ -46,7 +46,7 @@ const Login = () => {
         } else if (cleanRole === 'farmer') {
           navigate('/farmer-dashboard', { replace: true });
         } else {
-          navigate('/marketplace', { replace: true });
+          navigate('/browse', { replace: true });
         }
       } else {
         setMessage({

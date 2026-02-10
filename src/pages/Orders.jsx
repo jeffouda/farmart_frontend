@@ -141,7 +141,7 @@ const Orders = () => {
             }
           </p>
           <Link
-            to={isInDashboard ? '/dashboard' : '/marketplace'}
+            to={isInDashboard ? '/dashboard' : '/browse'}
             className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors">
             <ArrowLeft size={20} />
             {isInDashboard ? 'Back to Dashboard' : 'Browse Marketplace'}

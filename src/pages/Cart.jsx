@@ -24,7 +24,7 @@ const Cart = () => {
           <h2 className="text-2xl font-bold text-slate-800 mb-2">Your cart is empty</h2>
           <p className="text-slate-500 mb-6">Add livestock to your cart to proceed with checkout</p>
           <Link
-            to="/marketplace"
+            to="/browse"
             className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
             Start Shopping
           </Link>
@@ -131,7 +131,7 @@ const Cart = () => {
               </button>
 
               <Link
-                to="/marketplace"
+                to="/browse"
                 className="block mt-4 text-center text-sm text-slate-500 hover:text-primary transition-colors">
                 Continue Shopping
               </Link>
