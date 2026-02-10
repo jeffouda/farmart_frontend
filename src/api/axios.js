@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base URL - use relative path for Vite proxy
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api',
   headers: {
     'Content-Type': 'application/json',
   },

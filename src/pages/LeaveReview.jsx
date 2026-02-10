@@ -1,17 +1,7 @@
-/**
- * LeaveReview Component
- * 
- * A modal component that allows users to leave reviews for their orders.
- * Includes star rating, quick tags, feedback text area, and farmer rating.
- * 
- * @component
- * @param {Object} order - The order object to review
- * @param {Function} onClose - Callback function to close the modal
- * @param {Function} onSubmit - Callback function to submit the review
- */
 import React, { useState } from 'react';
-import { Star, X, CheckCircle, ThumbsUp } from 'lucide-react';
+import { Star, X, ThumbsUp, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import api from '../api/axios';
 
 const LeaveReview = ({ order, onClose, onSubmit }) => {
   const [rating, setRating] = useState(0);
@@ -20,8 +10,6 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
   const [selectedTags, setSelectedTags] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [farmerRating, setFarmerRating] = useState(0);
-  const [hoverFarmerRating, setHoverFarmerRating] = useState(0);
 
   const QUICK_TAGS = [
     'Fresh',
@@ -34,27 +22,6 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
     'Would Recommend',
   ];
 
-  /**
-   * Get the label for a given rating value
-   * @param {number} rate - Rating value from 0-5
-   * @returns {string} Label text
-   */
-  const getRatingLabel = (rate) => {
-    const labels = {
-      0: 'Tap to rate',
-      1: 'Poor',
-      2: 'Fair',
-      3: 'Good',
-      4: 'Very Good',
-      5: 'Excellent'
-    };
-    return labels[rate] || 'Tap to rate';
-  };
-
-  /**
-   * Toggle a tag in the selected tags array
-   * @param {string} tag - Tag to toggle
-   */
   const handleTagToggle = (tag) => {
     setSelectedTags(prev => 
       prev.includes(tag) 
@@ -63,26 +30,14 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
     );
   };
 
-  /**
-   * Handle the review submission
-   * Validates input and calls the onSubmit callback
-   */
   const handleSubmit = async () => {
-    // Validate main rating
     if (rating === 0) {
       toast.error('Please select a rating');
       return;
     }
 
-    // Validate feedback length
     if (feedback.length < 10) {
       toast.error('Please provide feedback (at least 10 characters)');
-      return;
-    }
-
-    // Validate feedback not exceeding max length
-    if (feedback.length > 500) {
-      toast.error('Feedback cannot exceed 500 characters');
       return;
     }
 
@@ -95,25 +50,19 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
       onSubmit({
         orderId: order.id,
         rating,
-        feedback: feedback.trim(),
+        feedback,
         tags: selectedTags,
-        farmerRating: farmerRating || null,
       });
 
       setSubmitted(true);
       toast.success('Thanks for your feedback!');
     } catch (error) {
-      console.error('Review submission error:', error);
       toast.error('Failed to submit review. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  /**
-   * Handle modal close
-   * Prevents closing while submitting
-   */
   const handleClose = () => {
     if (!submitting) {
       onClose();
@@ -154,7 +103,6 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
             onClick={handleClose}
             disabled={submitting}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-            aria-label="Close review modal"
           >
             <X className="w-5 h-5 text-gray-500" />
           </button>
@@ -175,10 +123,9 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
                   onMouseLeave={() => setHoverRating(0)}
                   className="p-1 transition-transform hover:scale-110"
                   disabled={submitting}
-                  aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
                 >
                   <Star
-                    className={`w-10 h-10 transition-colors ${
+                    className={`w-10 h-10 ${
                       star <= (hoverRating || rating)
                         ? 'fill-yellow-400 text-yellow-400'
                         : 'fill-gray-100 text-gray-300'
@@ -188,7 +135,12 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
               ))}
             </div>
             <p className="text-sm text-gray-500 mt-2">
-              {getRatingLabel(hoverRating || rating)}
+              {rating === 0 && 'Tap to rate'}
+              {rating === 1 && 'Poor'}
+              {rating === 2 && 'Fair'}
+              {rating === 3 && 'Good'}
+              {rating === 4 && 'Very Good'}
+              {rating === 5 && 'Excellent'}
             </p>
           </div>
 
@@ -229,37 +181,30 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
               rows={4}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
               disabled={submitting}
-              aria-describedby="feedback-hint"
             />
-            <span id="feedback-hint" className="sr-only">
-              Enter your detailed feedback about the product quality. Minimum 10 characters.
-            </span>
           </div>
 
           {/* Farmer Rating (Optional) */}
           <div className="pt-4 border-t border-gray-100">
-            <p className="text-sm font-semibold text-gray-700 mb-3">Rate the Farmer (Optional)</p>
+            <p className="text-sm font-semibold text-gray-700 mb-3">Rate the Farmer</p>
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <p className="text-sm text-gray-600">{order?.farmer_name || 'Farmer'}</p>
               </div>
-              <div className="flex items-center gap-2" role="radiogroup" aria-label="Farmer rating">
+              <div className="flex items-center gap-2">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
                     type="button"
-                    onClick={() => setFarmerRating(star === farmerRating ? 0 : star)}
-                    onMouseEnter={() => setHoverFarmerRating(star)}
-                    onMouseLeave={() => setHoverFarmerRating(0)}
-                    className="p-0.5 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 rounded-full"
+                    onClick={() => setRating(star)}
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    className="p-0.5 transition-transform hover:scale-110"
                     disabled={submitting}
-                    aria-label={`Rate farmer ${star} star${star > 1 ? 's' : ''}`}
-                    role="radio"
-                    aria-checked={farmerRating === star}
                   >
                     <Star
-                      className={`w-6 h-6 transition-colors duration-200 ${
-                        star <= (hoverFarmerRating || farmerRating)
+                      className={`w-6 h-6 ${
+                        star <= (hoverRating || rating)
                           ? 'fill-yellow-400 text-yellow-400'
                           : 'fill-gray-100 text-gray-300'
                       }`}
@@ -268,11 +213,6 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
                 ))}
               </div>
             </div>
-            {farmerRating > 0 && (
-              <p className="text-xs text-gray-500 mt-1 transition-opacity duration-200">
-                {getRatingLabel(farmerRating)}
-              </p>
-            )}
           </div>
         </div>
 
@@ -309,4 +249,3 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
 };
 
 export default LeaveReview;
-
