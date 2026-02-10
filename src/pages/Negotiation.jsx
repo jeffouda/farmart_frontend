@@ -174,6 +174,25 @@ function Negotiation() {
         )}
         <div ref={messagesEndRef} />
       </div>
+       {/* Input Area */}
+      <div className="bg-white border-t border-gray-200 px-4 py-3">
+        <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+          {/* Attachment Button */}
+          <button
+            type="button"
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <Image size={20} />
+          </button>
+
+          {/* Message Input */}
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white transition-all"
+          />
 
 
 
