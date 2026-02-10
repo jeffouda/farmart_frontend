@@ -31,3 +31,46 @@ function Marketplace() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
+
+  // Fetch livestock from API
+  useEffect(() => {
+    const fetchLivestock = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Build query params
+        const params = new URLSearchParams();
+        if (searchQuery) params.append('search', searchQuery);
+        if (selectedCategories.length > 0) params.append('species', selectedCategories.join(','));
+        if (priceRange.min) params.append('min_price', priceRange.min);
+        if (priceRange.max) params.append('max_price', priceRange.max);
+        if (selectedLocation) params.append('location', selectedLocation);
+        params.append('sort', sortBy);
+
+        const response = await api.get(/livestock?${params.toString()});
+        setLivestock(response.data.animals || response.data || []);
+      } catch (error) {
+        console.error('Failed to fetch livestock:', error);
+        setError('Failed to load livestock. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLivestock();
+  }, [searchQuery, selectedCategories, priceRange, selectedLocation, sortBy]);
+
+  // Check if item is in wishlist
+  const isInWishlist = (id) => {
+    return wishlistItems.some(item =>
+      String(item.animal?.id) === String(id) || String(item.animal_id) === String(id)
+    );
+  };
