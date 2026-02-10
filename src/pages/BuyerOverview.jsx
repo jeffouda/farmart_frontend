@@ -91,40 +91,55 @@ function BuyerOverview() {
           Profile Information
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <User size={18} className="text-green-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-slate-500 uppercase tracking-wider">Full Name</p>
-              <p className="font-bold text-slate-900">{currentUser?.full_name || currentUser?.name || 'User'}</p>
+              <p className="font-bold text-slate-900 truncate" title={currentUser?.full_name || currentUser?.name || 'User'}>
+                {currentUser?.full_name || currentUser?.name || 'User'}
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <Phone size={18} className="text-green-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-slate-500 uppercase tracking-wider">Phone</p>
-              <p className="font-bold text-slate-900">{currentUser?.phone_number || currentUser?.phone || 'Not provided'}</p>
+              <p className="font-bold text-slate-900 truncate" title={currentUser?.phone_number || currentUser?.phone || 'Not provided'}>
+                {currentUser?.phone_number || currentUser?.phone || 'Not provided'}
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <MapPin size={18} className="text-green-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-slate-500 uppercase tracking-wider">Location</p>
-              <p className="font-bold text-slate-900">{currentUser?.location || 'Not provided'}</p>
+              <p className="font-bold text-slate-900 truncate" title={currentUser?.location || 'Not provided'}>
+                {currentUser?.location || 'Not provided'}
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <Mail size={18} className="text-green-600" />
             </div>
-            <div>
+            <div className="relative min-w-0 group">
               <p className="text-xs text-slate-500 uppercase tracking-wider">Email</p>
-              <p className="font-bold text-slate-900">{currentUser?.email || 'Not provided'}</p>
+              <p className="font-bold text-slate-900 truncate cursor-help">
+                {currentUser?.email || 'Not provided'}
+              </p>
+              {/* Custom Tooltip */}
+              <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10">
+                <div className="bg-slate-900 text-white text-sm px-3 py-2 rounded-lg shadow-lg whitespace-nowrap">
+                  {currentUser?.email || 'Not provided'}
+                  <div className="absolute top-full left-4 -mt-1 border-4 border-transparent border-t-slate-900"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

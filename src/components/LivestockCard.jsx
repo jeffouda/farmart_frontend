@@ -1,21 +1,49 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, ShoppingCart } from 'lucide-react';
+import { useSelector, useDispatch } from 'react-redux';
+import { addToWishlist, removeFromWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
+import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
-const LivestockCard = ({ animal, onAddToCart, onToggleWishlist }) => {
-  const [isWishlisted, setIsWishlisted] = useState(false);
+const LivestockCard = ({ animal, onAddToCart }) => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { currentUser } = useAuth();
+  const wishlistItems = useSelector(state => state.wishlist.items);
+  
+  // Check if animal is in wishlist from Redux state
+  const isWishlisted = wishlistItems.some(
+    item => String(item.animal?.id) === String(animal.id) || String(item.animal_id) === String(animal.id)
+  );
 
   const handleWishlistToggle = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsWishlisted(!isWishlisted);
-    onToggleWishlist?.(animal.id);
+    
+    if (!currentUser) {
+      toast.error('Please login to save items');
+      navigate('/auth');
+      return;
+    }
+
+    if (isWishlisted) {
+      // Remove from wishlist
+      dispatch(optimisticRemoveFromWishlist(animal.id));
+      dispatch(removeFromWishlist(animal.id));
+      toast.success('Removed from wishlist');
+    } else {
+      // Add to wishlist
+      dispatch(addToWishlist(animal.id));
+      toast.success('Added to wishlist!');
+    }
   };
 
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
     onAddToCart?.(animal.id);
+    navigate('/cart');
   };
 
   // Format price with Kenyan Shillings
@@ -93,13 +121,13 @@ const LivestockCard = ({ animal, onAddToCart, onToggleWishlist }) => {
         </p>
 
         {/* Action Button */}
-        <Link
-          to={`/livestock/${animal.id}`}
-          className="w-full mt-3 block text-center bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-200 group"
+        <button
+          onClick={handleAddToCart}
+          className="w-full mt-3 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-200 group"
         >
-          <span className="group-hover:hidden">Add to Cart</span>
-          <span className="hidden group-hover:block">View Details</span>
-        </Link>
+          <ShoppingCart size={18} />
+          <span>Add to Cart</span>
+        </button>
       </div>
     </div>
   );

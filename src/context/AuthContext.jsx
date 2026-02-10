@@ -156,6 +156,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     // State
     currentUser,
+    setCurrentUser,
     token,
     loading,
     

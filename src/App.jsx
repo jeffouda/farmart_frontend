@@ -24,12 +24,19 @@ import NegotiationList from "./pages/NegotiationList";
 import NegotiationRoom from "./pages/NegotiationRoom";
 import Negotiation from "./pages/Negotiation";
 import RaiseDispute from "./pages/RaiseDispute";
+import Support from "./pages/Support";
+
+import BuyerDisputes from "./pages/BuyerDisputes";
+import BuyerNegotiationList from "./pages/BuyerNegotiationList";
+import BuyerNegotiationRoom from "./pages/BuyerNegotiationRoom";
 
 // Buyer Dashboard Components
 import BuyerDashboard from "./pages/BuyerDashboard";
 import BuyerOverview from "./pages/BuyerOverview";
 import BuyerWishlist from "./pages/BuyerWishlist";
+import BuyerOrders from "./pages/BuyerOrders";
 import BuyerSettings from "./pages/BuyerSettings";
+import BuyerProfile from "./pages/BuyerProfile";
 
 // Farmer Dashboard Components
 import FarmerDashboard from "./pages/FarmerDashboard";
@@ -40,6 +47,7 @@ import FarmerAnalytics from "./pages/FarmerAnalytics";
 import FarmerDisputes from "./pages/FarmerDisputes";
 import FarmerRaiseDispute from "./pages/FarmerRaiseDispute";
 import AddLivestock from "./pages/AddLivestock";
+import FarmerProfile from "./pages/FarmerProfile";
 
 // Admin Dashboard Components
 import AdminLayout from "./pages/AdminLayout";
@@ -94,6 +102,7 @@ function App() {
           <Route path="/negotiation/:livestockId/:receiverId" element={<Negotiation />} />
           <Route path="/dispute/:orderId" element={<RaiseDispute />} />
           <Route path="/dispute/new" element={<RaiseDispute />} />
+          <Route path="/support" element={<Support />} />
         </Route>
 
         {/*Protected Buyer Routes */}
@@ -105,9 +114,14 @@ function App() {
             </ProtectedRoute>
           }>
           <Route index element={<BuyerOverview />} />
-          <Route path="orders" element={<Orders />} />
+          <Route path="orders" element={<BuyerOrders />} />
+          <Route path="disputes" element={<BuyerDisputes />} />
+          <Route path="dispute/:orderId" element={<RaiseDispute />} />
           <Route path="wishlist" element={<BuyerWishlist />} />
           <Route path="settings" element={<BuyerSettings />} />
+          <Route path="profile" element={<BuyerProfile />} />
+          <Route path="negotiations" element={<BuyerNegotiationList />} />
+          <Route path="negotiations/:id" element={<BuyerNegotiationRoom />} />
         </Route>
 
         {/* Protected Farmer Routes */}
@@ -125,6 +139,7 @@ function App() {
           <Route path="disputes" element={<FarmerDisputes />} />
           <Route path="disputes/new" element={<FarmerRaiseDispute />} />
           <Route path="add" element={<AddLivestock />} />
+          <Route path="profile" element={<FarmerProfile />} />
         </Route>
 
         {/* Farmer Report Buyer Route */}

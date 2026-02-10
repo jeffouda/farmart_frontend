@@ -154,10 +154,15 @@ const FarmerDisputes = () => {
 
     setSubmitting(true);
     try {
-      // Try API call first
+      // Try API call first with FormData
       if (selectedDispute?.id) {
-        await api.post(`/disputes/${selectedDispute.id}/respond`, {
-          message: responseText,
+        const formData = new FormData();
+        formData.append('response', responseText);
+        if (evidence) {
+          formData.append('evidence', evidence);
+        }
+        await api.post(`/disputes/${selectedDispute.id}/respond`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
         });
       }
       
@@ -166,13 +171,14 @@ const FarmerDisputes = () => {
       setSelectedDispute(null);
       setResponseText('');
       setEvidence(null);
+      
+      // Refresh disputes
+      const response = await api.get('/disputes/my');
+      setIncomingDisputes(response.data.incoming || []);
+      setOutgoingDisputes(response.data.outgoing || []);
     } catch (error) {
-      // Fallback to mock success
-      toast.success('Response submitted successfully! An admin will review your case.');
-      setShowModal(false);
-      setSelectedDispute(null);
-      setResponseText('');
-      setEvidence(null);
+      console.error('Error submitting response:', error);
+      toast.error(error.response?.data?.error || 'Failed to submit response');
     } finally {
       setSubmitting(false);
     }
@@ -395,16 +401,32 @@ const FarmerDisputes = () => {
 
                     <div className="flex flex-col justify-center gap-3">
                       {activeTab === 'incoming' && (
-                        <button
-                          onClick={() => {
-                            setSelectedDispute(dispute);
-                            setShowModal(true);
-                          }}
-                          className="w-full py-3 px-4 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
-                        >
-                          <ShieldCheck className="w-4 h-4" />
-                          Respond / Upload Proof
-                        </button>
+                        <>
+                          {dispute.status === 'resolved' ? (
+                            <div className="w-full py-3 px-4 bg-gray-100 text-gray-500 font-medium rounded-lg flex items-center justify-center gap-2">
+                              <CheckCircle className="w-4 h-4" />
+                              Resolved - No Response Needed
+                            </div>
+                          ) : dispute.farmer_response ? (
+                            <div className="w-full py-3 px-4 bg-green-100 text-green-700 font-medium rounded-lg flex items-center justify-center gap-2">
+                              <CheckCircle className="w-4 h-4" />
+                              Response Submitted
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setSelectedDispute(dispute);
+                                setResponseText('');
+                                setEvidence(null);
+                                setShowModal(true);
+                              }}
+                              className="w-full py-3 px-4 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                            >
+                              <ShieldCheck className="w-4 h-4" />
+                              Respond / Upload Proof
+                            </button>
+                          )}
+                        </>
                       )}
                       <button className="w-full py-3 px-4 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors flex items-center justify-center gap-2">
                         <FileText className="w-4 h-4" />
@@ -462,7 +484,15 @@ const FarmerDisputes = () => {
 
             {/* Modal Content */}
             <div className="p-6 space-y-6">
-              {/* Buyer's Claim Summary */}
+              {/* Already Responded Warning */}
+              {selectedDispute.farmer_response && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-green-800 font-medium">You have already responded to this dispute.</p>
+                  <p className="text-green-600 text-sm mt-1">
+                    Response submitted on: {new Date(selectedDispute.farmer_response_at).toLocaleString()}
+                  </p>
+                </div>
+              )}
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
                 <h3 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
                   <User className="w-4 h-4" />
@@ -546,25 +576,27 @@ const FarmerDisputes = () => {
                 }}
                 className="px-4 py-2 text-slate-700 font-medium hover:bg-slate-100 rounded-lg transition-colors"
               >
-                Cancel
+                Close
               </button>
-              <button
-                onClick={handleSubmitResponse}
-                disabled={submitting || responseText.length < 20}
-                className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {submitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    Submit Response
-                  </>
-                )}
-              </button>
+              {!selectedDispute.farmer_response && selectedDispute.status !== 'resolved' && (
+                <button
+                  onClick={handleSubmitResponse}
+                  disabled={submitting || responseText.length < 20}
+                  className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {submitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Submit Response
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

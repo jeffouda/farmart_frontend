@@ -160,6 +160,8 @@ function LivestockDetail() {
       image: animal.image
     }));
     toast.success(`${animal.title} added to cart!`);
+    // Navigate to cart page after adding
+    navigate('/cart');
   };
 
   const handleToggleWishlist = async () => {

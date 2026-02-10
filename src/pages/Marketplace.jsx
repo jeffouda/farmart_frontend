@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import LivestockCard from '../components/LivestockCard';
 
-const ANIMAL_TYPES = ['Cattle', 'Goats', 'Sheep', 'Chicken', 'Pig'];
+const ANIMAL_TYPES = ['Cow', 'Goat', 'Sheep', 'Chicken', 'Pig'];
 const LOCATIONS = [
   'Nairobi City', 'Kiambu', 'Nakuru', 'Kisumu', 'Eldoret',
   'Mombasa', 'Narok', 'Kajiado', 'Thika', 'Machakos'
@@ -92,6 +92,7 @@ function Marketplace() {
         image: item.image_url || item.image
       }));
       toast.success('Added to cart!');
+      navigate('/cart');
     }
   };
 
@@ -104,7 +105,9 @@ function Marketplace() {
     }
 
     if (isInWishlist(id)) {
+      // Optimistic removal for instant UI feedback
       dispatch(optimisticRemoveFromWishlist(id));
+      // Call API to remove
       dispatch(removeFromWishlist(id));
       toast.success('Removed from wishlist');
     } else {
@@ -332,7 +335,6 @@ function Marketplace() {
                     weight: animal.weight
                   }}
                   onAddToCart={handleAddToCart}
-                  onToggleWishlist={handleToggleWishlist}
                 />
               ))}
             </div>

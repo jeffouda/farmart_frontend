@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Heart, MapPin, Filter, Star, ShoppingCart } from 'lucide-react';
+import { Search, Heart, MapPin, Filter, Star, ShoppingCart, Loader2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../redux/cartSlice';
 import { addToWishlist, removeFromWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
 
-const ANIMAL_TYPES = ['Cattle', 'Goats', 'Sheep', 'Chicken', 'Pig'];
+const ANIMAL_TYPES = ['Cow', 'Goat', 'Sheep', 'Chicken', 'Pig'];
 const LOCATIONS = [
   'Nairobi City', 'Kiambu', 'Nakuru', 'Kisumu', 'Eldoret',
   'Mombasa', 'Narok', 'Kajiado', 'Thika', 'Machakos'
@@ -28,6 +28,7 @@ function BrowseLivestock() {
   // State
   const [livestock, setLivestock] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filtering, setFiltering] = useState(false);
   const [error, setError] = useState(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
@@ -38,34 +39,50 @@ function BrowseLivestock() {
   const [selectedLocation, setSelectedLocation] = useState('');
   const [sortBy, setSortBy] = useState('newest');
 
+  // Debounce function
+  const useDebounce = (value, delay) => {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    useEffect(() => {
+      const handler = setTimeout(() => setDebouncedValue(value), delay);
+      return () => clearTimeout(handler);
+    }, [value, delay]);
+    return debouncedValue;
+  };
+
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  const debouncedMinPrice = useDebounce(priceRange.min, 500);
+  const debouncedMaxPrice = useDebounce(priceRange.max, 500);
+
   // Fetch livestock from API
+  const fetchLivestock = useCallback(async () => {
+    try {
+      setFiltering(true);
+      setError(null);
+
+      // Build query params
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.append('search', debouncedSearch);
+      if (selectedCategories.length > 0) params.append('species', selectedCategories.join(','));
+      if (debouncedMinPrice) params.append('min_price', debouncedMinPrice);
+      if (debouncedMaxPrice) params.append('max_price', debouncedMaxPrice);
+      if (selectedLocation) params.append('location', selectedLocation);
+      params.append('sort', sortBy);
+
+      const response = await api.get(`/livestock?${params.toString()}`);
+      setLivestock(response.data.animals || response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch livestock:', error);
+      setError('Failed to load livestock. Please try again.');
+    } finally {
+      setFiltering(false);
+      setLoading(false);
+    }
+  }, [debouncedSearch, selectedCategories, debouncedMinPrice, debouncedMaxPrice, selectedLocation, sortBy]);
+
+  // Initial load and filter changes
   useEffect(() => {
-    const fetchLivestock = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Build query params
-        const params = new URLSearchParams();
-        if (searchQuery) params.append('search', searchQuery);
-        if (selectedCategories.length > 0) params.append('species', selectedCategories.join(','));
-        if (priceRange.min) params.append('min_price', priceRange.min);
-        if (priceRange.max) params.append('max_price', priceRange.max);
-        if (selectedLocation) params.append('location', selectedLocation);
-        params.append('sort', sortBy);
-
-        const response = await api.get(`/livestock?${params.toString()}`);
-        setLivestock(response.data.animals || response.data || []);
-      } catch (error) {
-        console.error('Failed to fetch livestock:', error);
-        setError('Failed to load livestock. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchLivestock();
-  }, [searchQuery, selectedCategories, priceRange, selectedLocation, sortBy]);
+  }, [fetchLivestock]);
 
   // Check if item is in wishlist
   const isInWishlist = (id) => {
@@ -92,6 +109,7 @@ function BrowseLivestock() {
         image: item.image_url || item.image
       }));
       toast.success('Added to cart!');
+      navigate('/cart');
     }
   };
 
@@ -138,7 +156,7 @@ function BrowseLivestock() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-slate-600 font-medium">Loading livestock...</p>
@@ -150,7 +168,7 @@ function BrowseLivestock() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 text-red-300 mx-auto mb-4">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,7 +241,7 @@ function BrowseLivestock() {
                       type="checkbox"
                       checked={selectedCategories.includes(type)}
                       onChange={() => handleCategoryToggle(type)}
-                      className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500"
+                      className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 cursor-pointer"
                     />
                     <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900">{type}</span>
                   </label>
@@ -258,7 +276,7 @@ function BrowseLivestock() {
               <select
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
               >
                 <option value="">All Locations</option>
                 {LOCATIONS.map((loc) => (
@@ -273,7 +291,7 @@ function BrowseLivestock() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
               >
                 {SORT_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -287,12 +305,21 @@ function BrowseLivestock() {
         <main className="flex-1">
           <div className="mb-6 flex items-center justify-between">
             <p className="text-sm font-medium text-slate-500">
-              Showing <span className="font-bold text-slate-900">{livestock.length}</span> livestock
+              {filtering ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Updating...
+                </span>
+              ) : (
+                <>
+                  Showing <span className="font-bold text-slate-900">{livestock.length}</span> livestock
+                </>
+              )}
             </p>
           </div>
 
           {/* Empty State */}
-          {livestock.length === 0 && (
+          {livestock.length === 0 && !filtering && (
             <div className="bg-white rounded-2xl p-12 text-center">
               <MapPin className="w-12 h-12 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-bold text-slate-900 mb-2">No livestock found</h3>
@@ -343,8 +370,6 @@ function BrowseLivestock() {
 
                   {/* Content */}
                   <div className="p-8">
-                    {/* Species Badge Moved to Image */}
-
                     {/* Title */}
                     <h3 className="text-lg font-bold text-slate-900 leading-tight mb-3">
                       {animal.breed || `${animal.species} - Breed`}
@@ -425,7 +450,7 @@ function BrowseLivestock() {
                       type="checkbox"
                       checked={selectedCategories.includes(type)}
                       onChange={() => handleCategoryToggle(type)}
-                      className="w-4 h-4 rounded border-slate-300 text-green-600"
+                      className="w-4 h-4 rounded border-slate-300 text-green-600 cursor-pointer"
                     />
                     <span className="text-sm font-medium text-slate-700">{type}</span>
                   </label>
@@ -492,7 +517,7 @@ function BrowseLivestock() {
               <button
                 onClick={() => setMobileFiltersOpen(false)}
                 className="flex-1 py-4 bg-green-600 text-white font-black uppercase text-sm tracking-wider rounded-xl">
-                Apply Filters
+                Apply
               </button>
             </div>
           </div>

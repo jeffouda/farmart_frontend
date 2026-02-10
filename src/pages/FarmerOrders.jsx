@@ -29,6 +29,10 @@ const getStatusColors = (status) => {
       return { bg: "bg-green-100", text: "text-green-700", label: "Delivered" };
     case "cancelled":
       return { bg: "bg-red-100", text: "text-red-700", label: "Cancelled" };
+    case "payment_pending":
+      return { bg: "bg-amber-100", text: "text-amber-700", label: "Payment Pending" };
+    case "completed":
+      return { bg: "bg-green-100", text: "text-green-700", label: "Completed" };
     default:
       return { bg: "bg-slate-100", text: "text-slate-700", label: status };
   }
@@ -203,8 +207,8 @@ const OrderCard = ({ order, onViewDetails, onUpdateStatus }) => {
           View Details
         </button>
 
-        {/* Mark as Shipped (only if pending/processing) */}
-        {(order.status === "pending" || order.status === "processing") && (
+        {/* Mark as Shipped (only if pending/processing/payment_pending) */}
+        {(order.status === "pending" || order.status === "processing" || order.status === "payment_pending") && (
           <button
             onClick={() => onUpdateStatus(order.id, "shipped")}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -214,15 +218,12 @@ const OrderCard = ({ order, onViewDetails, onUpdateStatus }) => {
           </button>
         )}
 
-        {/* Mark Delivered (only if in_transit) */}
+        {/* Awaiting Delivery badge (if in_transit) */}
         {order.status === "in_transit" && (
-          <button
-            onClick={() => onUpdateStatus(order.id, "delivered")}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-          >
+          <div className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium">
             <CheckCircle size={16} />
-            Mark Delivered
-          </button>
+            Awaiting Buyer Confirmation
+          </div>
         )}
       </div>
     </div>
@@ -266,9 +267,9 @@ const FarmerOrders = () => {
 
       // Calculate stats
       setStats({
-        active: ordersData.filter((o) => ["pending", "processing"].includes(o.status)).length,
+        active: ordersData.filter((o) => ["pending", "processing", "payment_pending"].includes(o.status)).length,
         shipped: ordersData.filter((o) => o.status === "in_transit").length,
-        history: ordersData.filter((o) => ["delivered", "cancelled"].includes(o.status)).length,
+        history: ordersData.filter((o) => ["delivered", "cancelled", "completed"].includes(o.status)).length,
       });
     } catch (error) {
       console.error("Failed to fetch orders:", error);
@@ -285,11 +286,11 @@ const FarmerOrders = () => {
   // Filter orders based on active tab
   const filteredOrders = orders.filter((order) => {
     if (activeTab === "active") {
-      return ["pending", "processing"].includes(order.status);
+      return ["pending", "processing", "payment_pending"].includes(order.status);
     } else if (activeTab === "shipped") {
       return order.status === "in_transit";
     } else if (activeTab === "history") {
-      return ["delivered", "cancelled"].includes(order.status);
+      return ["delivered", "cancelled", "completed"].includes(order.status);
     }
     return true;
   });

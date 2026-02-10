@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../redux/cartSlice';
-import { addToWishlist, removeFromWishlist } from '../redux/wishlistSlice';
+import { addToWishlist, removeFromWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
@@ -22,7 +22,11 @@ function LivestockDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('description');
-  const [isWishlisted, setIsWishlisted] = useState(false);
+
+  // Compute isInWishlist directly from Redux
+  const isInWishlist = animal ? wishlistItems.some(
+    item => String(item.animal?.id) === String(animal.id) || String(item.animal_id) === String(animal.id)
+  ) : false;
 
   // Fetch animal details
   useEffect(() => {
@@ -43,14 +47,7 @@ function LivestockDetails() {
     fetchAnimal();
   }, [id]);
 
-  // Check wishlist status
-  useEffect(() => {
-    if (animal) {
-      setIsWishlisted(wishlistItems.some(
-        item => String(item.animal?.id) === String(animal.id)
-      ));
-    }
-  }, [animal, wishlistItems]);
+  // Check wishlist status - removed, now computed directly from Redux
 
   // Format price
   const formatPrice = (price) => {
@@ -76,6 +73,7 @@ function LivestockDetails() {
       image: animal.image_url || animal.image
     }));
     toast.success('Added to cart!');
+    navigate('/cart');
   };
 
   // Handle wishlist toggle
@@ -86,14 +84,14 @@ function LivestockDetails() {
       return;
     }
 
-    if (isWishlisted) {
+    if (isInWishlist) {
+      dispatch(optimisticRemoveFromWishlist(animal.id));
       dispatch(removeFromWishlist(animal.id));
       toast.success('Removed from wishlist');
     } else {
       dispatch(addToWishlist(animal.id));
       toast.success('Added to wishlist!');
     }
-    setIsWishlisted(!isWishlisted);
   };
 
   // Handle message farmer
@@ -250,12 +248,12 @@ function LivestockDetails() {
                 <button
                   onClick={handleToggleWishlist}
                   className={`px-6 py-4 border-2 rounded-xl flex items-center justify-center transition-colors ${
-                    isWishlisted
+                    isInWishlist
                       ? 'border-red-200 bg-red-50 text-red-500'
                       : 'border-slate-200 hover:border-red-200 text-slate-400 hover:text-red-500'
                   }`}
                 >
-                  <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-current' : ''}`} />
+                  <Heart className={`w-5 h-5 ${isInWishlist ? 'fill-current' : ''}`} />
                 </button>
               </div>
             </div>
@@ -401,12 +399,12 @@ function LivestockDetails() {
           <button
             onClick={handleToggleWishlist}
             className={`px-4 py-3 border-2 rounded-xl flex items-center justify-center ${
-              isWishlisted
+              isInWishlist
                 ? 'border-red-200 bg-red-50 text-red-500'
                 : 'border-gray-200 text-gray-400'
             }`}
           >
-            <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-current' : ''}`} />
+            <Heart className={`w-5 h-5 ${isInWishlist ? 'fill-current' : ''}`} />
           </button>
 
           <button

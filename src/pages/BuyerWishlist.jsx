@@ -1,19 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, Trash2, ShoppingBag, ArrowLeft, Loader2 } from 'lucide-react';
 import api from '../api/axios';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../redux/cartSlice';
+import { fetchWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
+import toast from 'react-hot-toast';
 
 function BuyerWishlist() {
-  const [wishlistItems, setWishlistItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
+  const reduxWishlistItems = useSelector(state => state.wishlist.items);
+  const loading = useSelector(state => state.wishlist.status === 'loading');
+  
   // Debug: Log wishlist items structure
-  console.log("Wishlist Items:", wishlistItems);
+  console.log("Redux Wishlist Items:", reduxWishlistItems);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-KE', {
@@ -23,39 +24,38 @@ function BuyerWishlist() {
     }).format(amount);
   };
 
-  // Fetch wishlist from API
+  // Fetch wishlist from API and sync with Redux
   useEffect(() => {
-    const fetchWishlist = async () => {
+    const fetchWishlistData = async () => {
       try {
-        setLoading(true);
-        const response = await api.get('/wishlist/');
-        setWishlistItems(response.data || []);
-        setError(null);
+        // Dispatch Redux action to fetch and sync wishlist
+        await dispatch(fetchWishlist()).unwrap();
       } catch (err) {
         console.error('Error fetching wishlist:', err);
-        setError('Failed to load wishlist');
-        setWishlistItems([]);
-      } finally {
-        setLoading(false);
       }
     };
 
-    fetchWishlist();
+    fetchWishlistData();
+  }, [dispatch]);
 
-    // Cleanup on unmount/logout
-    return () => {
-      setWishlistItems([]);
-      setLoading(false);
-    };
-  }, []);
-
-  const handleRemove = async (itemId) => {
+  const handleRemove = async (item) => {
     try {
-      await api.delete(`/wishlist/${itemId}`);
-      setWishlistItems(wishlistItems.filter(item => item.id !== itemId));
+      // Get the animal_id and wishlist item id
+      const animalId = item.animal?.id || item.animal_id;
+      const wishlistItemId = item.id;
+      
+      // Optimistic removal for instant UI feedback (before API call)
+      dispatch(optimisticRemoveFromWishlist(animalId));
+      
+      // Call API to remove the wishlist item using the wishlist item's id
+      await api.delete(`/wishlist/${wishlistItemId}`);
+      
+      toast.success('Removed from wishlist');
     } catch (err) {
       console.error('Error removing from wishlist:', err);
-      alert('Failed to remove item from wishlist');
+      // Re-fetch to sync state if API call fails
+      dispatch(fetchWishlist());
+      toast.error('Failed to remove item from wishlist');
     }
   };
 
@@ -67,11 +67,11 @@ function BuyerWishlist() {
       price: item.animal.price,
       quantity: 1,
     }));
-    navigate('/checkout');
+    navigate('/cart');
   };
 
   // Empty State
-  if (!loading && wishlistItems.length === 0) {
+  if (!loading && reduxWishlistItems.length === 0) {
     return (
       <div className="space-y-6">
         <div>
@@ -114,30 +114,23 @@ function BuyerWishlist() {
             My Wishlist
           </h1>
           <p className="text-slate-500 mt-1">
-            {loading ? 'Loading...' : `${wishlistItems.length} items saved`}
+            {loading ? 'Loading...' : `${reduxWishlistItems.length} items saved`}
           </p>
         </div>
       </div>
 
       {/* Loading State */}
-      {loading && (
+      {loading && reduxWishlistItems.length === 0 && (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-green-600" />
           <span className="ml-2 text-slate-500">Loading wishlist...</span>
         </div>
       )}
 
-      {/* Error State */}
-      {error && !loading && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <p className="text-red-600">{error}</p>
-        </div>
-      )}
-
       {/* Wishlist Grid */}
-      {!loading && !error && wishlistItems.length > 0 && (
+      {!loading && reduxWishlistItems.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {wishlistItems.map((item) => (
+          {reduxWishlistItems.map((item) => (
             <div
               key={item.id}
               className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
@@ -177,7 +170,7 @@ function BuyerWishlist() {
                   </span>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleRemove(item.id)}
+                      onClick={() => handleRemove(item)}
                       className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                       title="Remove from wishlist">
                       <Trash2 size={18} />

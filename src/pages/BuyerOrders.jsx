@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, ArrowLeft, Loader2 } from 'lucide-react';
+import { Package, ArrowLeft, Loader2, Flag, CheckCircle, Truck } from 'lucide-react';
 import api from '../api/axios';
+import toast from 'react-hot-toast';
 
 // Status Badge Component
 const StatusBadge = ({ status }) => {
@@ -78,6 +79,20 @@ function BuyerOrders() {
     return items[0] || 'Animal';
   };
 
+  // Confirm delivery
+  const confirmDelivery = async (orderId) => {
+    try {
+      await api.post(`/orders/${orderId}/confirm-receipt`);
+      toast.success('Delivery confirmed! Order completed.');
+      // Refresh orders
+      const response = await api.get('/orders/');
+      setOrders(response.data || []);
+    } catch (error) {
+      console.error('Error confirming delivery:', error);
+      toast.error('Failed to confirm delivery');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -127,6 +142,9 @@ function BuyerOrders() {
                   <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Status
                   </th>
+                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -159,6 +177,39 @@ function BuyerOrders() {
                     </td>
                     <td className="px-6 py-4">
                       <StatusBadge status={order.status} />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        {/* Confirm Delivery Button - Show for in_transit orders */}
+                        {order.status === 'in_transit' && (
+                          <button
+                            onClick={() => confirmDelivery(order.id)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                            title="Confirm that you received the order"
+                          >
+                            <CheckCircle size={12} />
+                            Confirm Delivery
+                          </button>
+                        )}
+                        {/* Report Issue Button - Show for all non-pending orders */}
+                        {order.status && !['pending', 'payment_pending', 'payment_failed'].includes(order.status.toLowerCase()) && order.status !== 'in_transit' && (
+                          <Link
+                            to={'/dashboard/dispute/' + order.id}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                            title="Report an issue with this order"
+                          >
+                            <Flag size={12} />
+                            Report Issue
+                          </Link>
+                        )}
+                        {/* Completed Badge */}
+                        {(order.status?.toLowerCase() === 'delivered' || order.status?.toLowerCase() === 'completed') && (
+                          <span className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 border border-green-200 rounded-lg">
+                            <CheckCircle size={12} />
+                            Completed
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

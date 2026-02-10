@@ -199,10 +199,12 @@ const Checkout = () => {
             quantity: item.quantity || 1
           })),
           total_amount: grandTotal,
-          payment_method: formData.paymentMethod
+          payment_method: formData.paymentMethod,
+          phone_number: formData.phone,
+          shipping_address: shippingAddress
         });
         
-        orderId = response.data.order.id;
+        orderId = response.data.order_id || response.data.order?.id;
         console.log("🆕 New order created:", orderId);
       }
 

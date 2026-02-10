@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, ShoppingCart, Trash2, ArrowLeft } from 'lucide-react';
 import { addToCart } from '../redux/cartSlice';
 import { removeFromWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 
 const Wishlist = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const wishlistItems = useSelector(state => state.wishlist.items);
 
   const formatPrice = (price) => {
@@ -33,6 +34,7 @@ const Wishlist = () => {
     // Also call API to remove
     dispatch(removeFromWishlist(animalId));
     toast.success(`${animal.name || animal.species} moved to cart!`);
+    navigate('/cart');
   };
 
   const handleRemoveFromWishlist = (item) => {
