@@ -14,19 +14,19 @@ import toast from "react-hot-toast";
 // High-contrast status labels for Escrow workflow
 const StatusBadge = ({ status }) => {
   const styles = {
-    held: "bg-blue-600 text-white border-2 border-blue-800", // Funds held by platform
-    paid: "bg-green-600 text-white border-2 border-green-800", // Transaction done
-    pending: "bg-yellow-400 text-black border-2 border-yellow-600",
-    completed: "bg-slate-200 text-slate-500 border-2 border-slate-300",
-    cancelled: "bg-red-600 text-white border-2 border-red-800",
+    paid: "bg-blue-600 text-white border-2 border-blue-800", // Funds held by platform
+    completed: "bg-green-600 text-white border-2 border-green-800", // Transaction fully closed
+    payment_pending: "bg-yellow-400 text-black border-2 border-yellow-600",
+    delivered: "bg-slate-200 text-slate-500 border-2 border-slate-300",
+    failed: "bg-red-600 text-white border-2 border-red-800",
   };
 
   const labels = {
-    held: "💰 IN ESCROW",
-    paid: "✅ PAID",
-    pending: "⏳ WAITING",
-    completed: "🏁 CLOSED",
-    cancelled: "❌ CANCELLED",
+    paid: "💰 IN ESCROW",
+    completed: "✅ RELEASED",
+    payment_pending: "⏳ UNPAID",
+    delivered: "🚚 DELIVERED",
+    failed: "❌ FAILED",
   };
 
   return (
@@ -40,7 +40,7 @@ const StatusBadge = ({ status }) => {
 function BuyerOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [releasingId, setReleasingId] = useState(null); // Prevents double-payouts
+  const [releasingId, setReleasingId] = useState(null);
 
   const fetchOrders = async () => {
     try {
@@ -60,25 +60,25 @@ function BuyerOrders() {
 
   const handleConfirmDelivery = async (orderId) => {
     const isConfirmed = window.confirm(
-      "CONFIRM DELIVERY: Have you received the livestock in good condition? This will release the funds to the seller immediately.",
+      "CONFIRM DELIVERY: Have you received the livestock in good condition? This will release the funds from Escrow to the seller immediately.",
     );
 
     if (!isConfirmed) return;
 
     setReleasingId(orderId);
-    const loadToast = toast.loading("Executing B2C Payout...");
+    const loadToast = toast.loading("Releasing Escrow Funds...");
 
     try {
-      // Calls the /payments/release-funds endpoint in your Flask backend
-      await api.post("/payments/release-funds", { orderId });
+      // UPDATED: Points to the correct route in app/orders/routes.py
+      await api.post(`/orders/confirm-receipt/${orderId}`);
 
-      toast.success("PAYMENT RELEASED: Seller has been paid.", {
+      toast.success("PAYMENT RELEASED: Farmer has been credited.", {
         id: loadToast,
       });
-      fetchOrders(); // Refresh to update status to 'completed'
+      fetchOrders(); // Refresh status to 'completed'
     } catch (err) {
       const msg =
-        err.response?.data?.message || "Payout rejected. Contact support.";
+        err.response?.data?.message || "Release failed. Contact support.";
       toast.error(msg, { id: loadToast });
     } finally {
       setReleasingId(null);
@@ -89,9 +89,10 @@ function BuyerOrders() {
 
   const getAnimalName = (items) => {
     if (!items || items.length === 0) return "LIVESTOCK ITEM";
-    return typeof items[0] === "object"
-      ? items[0].name.toUpperCase()
-      : items[0].toUpperCase();
+    const firstItem = items[0];
+    return typeof firstItem === "object"
+      ? (firstItem.name || firstItem.species || "LIVESTOCK").toUpperCase()
+      : firstItem.toUpperCase();
   };
 
   return (
@@ -110,7 +111,7 @@ function BuyerOrders() {
         <div className="flex flex-col items-center justify-center py-32 bg-slate-900 rounded-lg border-4 border-slate-800">
           <Loader2 className="w-12 h-12 animate-spin text-green-500 mb-4" />
           <p className="font-black text-green-500 uppercase tracking-[0.2em] text-lg">
-            ENCRYPTING CONNECTION...
+            SYNCING WITH BLOCKCHAIN...
           </p>
         </div>
       ) : orders.length > 0 ? (
@@ -148,9 +149,9 @@ function BuyerOrders() {
                   <StatusBadge status={order.status} />
                 </div>
 
-                {/* The "Big Red Button" logic for Escrow */}
+                {/* The Escrow Action Trigger */}
                 <div className="border-t-2 lg:border-t-0 lg:border-l-4 border-slate-100 pt-6 lg:pt-0 lg:pl-10">
-                  {order.status === "held" ? (
+                  {order.status === "paid" ? (
                     <div className="space-y-4">
                       <button
                         onClick={() => handleConfirmDelivery(order.id)}
@@ -164,21 +165,21 @@ function BuyerOrders() {
                         RELEASE FUNDS
                       </button>
                       <p className="flex items-center gap-2 text-[11px] text-blue-700 font-black uppercase tracking-widest">
-                        <ShieldCheck size={16} /> TRANSACTION LOCKED BY ESCROW
+                        <ShieldCheck size={16} /> SECURED IN ESCROW
                       </p>
                     </div>
                   ) : order.status === "completed" ? (
                     <div className="flex items-center gap-3 py-4 px-6 bg-slate-100 border-2 border-slate-300">
                       <CheckCircle2 size={24} className="text-green-600" />
                       <span className="text-sm font-black uppercase text-slate-600 tracking-tighter">
-                        FUNDS DISBURSED TO SELLER
+                        TRANSACTION COMPLETED
                       </span>
                     </div>
                   ) : (
                     <Link
                       to={`/checkout/${order.id}`}
                       className="text-sm font-black text-green-600 hover:text-black uppercase tracking-[0.2em]">
-                      VIEW INVOICE →
+                      VIEW DETAILS →
                     </Link>
                   )}
                 </div>
@@ -193,7 +194,7 @@ function BuyerOrders() {
             No Active Contracts
           </h2>
           <Link
-            to="/browse"
+            to="/market"
             className="mt-8 inline-block px-12 py-5 bg-black text-white font-black uppercase italic tracking-tighter hover:bg-green-600 transition-all shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)]">
             GO TO MARKET
           </Link>
