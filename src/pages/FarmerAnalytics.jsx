@@ -64,3 +64,88 @@ const COLORS = {
   cancelled: "#ef4444",
   inTransit: "#8b5cf6",
 };
+
+const FarmerAnalytics = () => {
+  const [orders, setOrders] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [metrics, setMetrics] = useState({});
+  const [revenueTrend, setRevenueTrend] = useState([]);
+  const [orderStatusData, setOrderStatusData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState("week"); // day, week, month
+
+  // Fetch analytics data from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Try to fetch from dedicated analytics endpoint
+        const response = await api.get("/analytics/dashboard");
+        const data = response.data;
+
+        // Set metrics directly from backend
+        setMetrics({
+          totalRevenue: data.metrics?.total_revenue || 0,
+          totalOrders: data.metrics?.total_orders || 0,
+          avgOrderValue: data.metrics?.avg_order_value || 0,
+          avgRating: data.metrics?.avg_rating || 0,
+          completedOrders: data.metrics?.completed_orders || 0,
+          activeOrders: data.metrics?.active_orders || 0,
+        });
+
+        // Set chart data from backend
+        setRevenueTrend(data.revenue_trend || []);
+        setOrderStatusData(
+          Object.entries(data.status_breakdown || {}).map(([status, count]) => ({
+            name: status.charAt(0).toUpperCase() + status.slice(1).replace("_", " "),
+            value: count,
+            color: statusColors[status] || COLORS.pending,
+          }))
+        );
+
+        // For orders list (fallback display)
+        setOrders(data.revenue_trend?.flatMap(d => Array(d.orders).fill({ total_amount: d.revenue, status: "delivered" })) || []);
+
+      } catch (error) {
+        console.warn("Analytics endpoint not available, using fallback:", error?.message);
+        // Fallback to calculating from orders/reviews endpoints
+        const [ordersRes, reviewsRes] = await Promise.allSettled([
+          api.get("/orders/my-sales"),
+          api.get("/reviews"),
+        ]);
+
+        if (ordersRes.status === "fulfilled") {
+          setOrders(ordersRes.value.data);
+        } else {
+          setOrders(mockOrders);
+        }
+
+        if (reviewsRes.status === "fulfilled") {
+          const reviewsData = reviewsRes.value.data;
+          if (Array.isArray(reviewsData)) {
+            setReviews(reviewsData);
+          } else if (reviewsData.reviews) {
+            setReviews(reviewsData.reviews);
+          } else {
+            setReviews(mockReviews);
+          }
+        } else {
+          setReviews(mockReviews);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Status colors mapping
+  const statusColors = {
+    delivered: COLORS.delivered,
+    pending: COLORS.pending,
+    shipped: COLORS.shipped,
+    in_transit: COLORS.inTransit,
+    cancelled: COLORS.cancelled,
+    completed: COLORS.delivered,
+  };
