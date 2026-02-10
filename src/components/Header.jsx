@@ -14,6 +14,7 @@ function Header() {
       navigate("/auth", { state: { role: 'farmer' } });
     }
   };
+  
   return (
     <>
       {/* HERO SECTION */}
@@ -44,7 +45,7 @@ function Header() {
             and more with total transparency and secure logistics.
           </motion.p>
 
-          <motion.div
+                    <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.6 }}
@@ -67,7 +68,7 @@ function Header() {
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white to-transparent" />
       </div>
 
-      {/* ABOUT SECTION */}
+            {/* ABOUT SECTION */}
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -114,7 +115,7 @@ function Header() {
               ))}
             </div>
 
-            <div className="h-[1px] w-full bg-slate-100 my-10" />
+                        <div className="h-[1px] w-full bg-slate-100 my-10" />
 
             <div className="relative p-8 rounded-3xl bg-green-50 border-l-8 border-green-600 mb-10 shadow-sm">
               <p className="text-slate-800 leading-relaxed font-bold italic text-lg">

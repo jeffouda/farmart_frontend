@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, MessageCircle, DollarSign, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { X, MessageCircle, DollarSign, Loader2, CheckCircle, AlertCircle, RotateCcw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
@@ -10,51 +10,183 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState('form'); // 'form', 'success', 'error'
+  const [errors, setErrors] = useState({});
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastError, setLastError] = useState(null);
+  const modalRef = useRef(null);
+  const previousActiveElement = useRef(null);
+  const abortControllerRef = useRef(null);
+
+  // Maximum retry attempts
+  const MAX_RETRIES = 3;
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        handleClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      previousActiveElement.current = document.activeElement;
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+      // Abort any pending requests on cleanup
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [isOpen]);
+
+  // Focus trap within modal
+  useEffect(() => {
+    if (isOpen && modalRef.current) {
+      const focusableElements = modalRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      
+      if (focusableElements.length > 0) {
+        focusableElements[0].focus();
+      }
+    }
+  }, [isOpen, step]);
 
   if (!isOpen || !animal) return null;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const validateForm = () => {
+    const newErrors = {};
     
     if (!isAuthenticated) {
-      toast.error('Please log in to make an offer');
-      return;
-    }
-
-    if (currentUser?.role !== 'buyer') {
-      toast.error('Only buyers can make offers');
-      return;
+      newErrors.auth = 'Please log in to make an offer';
+    } else if (currentUser?.role !== 'buyer') {
+      newErrors.role = 'Only buyers can make offers';
     }
 
     const amount = parseFloat(offerAmount);
     if (!amount || amount <= 0) {
-      toast.error('Please enter a valid offer amount');
+      newErrors.amount = 'Please enter a valid offer amount greater than 0';
+    } else if (amount > animal.price * 1.2) {
+      newErrors.amount = `Offer cannot exceed 120% of asking price (KES ${Math.round(animal.price * 1.2).toLocaleString()})`;
+    } else if (amount < animal.price * 0.5) {
+      newErrors.amount = 'Offer is too low. Minimum allowed is 50% of asking price';
+    }
+
+    if (message.length > 500) {
+      newErrors.message = 'Message cannot exceed 500 characters';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Parse error response with fallback messages
+  const parseError = useCallback((error) => {
+    if (!error) return 'An unexpected error occurred';
+    
+    // Handle network errors
+    if (error.code === 'ECONNABORTED') {
+      return 'Request timed out. Please try again.';
+    }
+    if (!error.response) {
+      if (error.message === 'Network Error') {
+        return 'Unable to connect to server. Please check your internet connection.';
+      }
+      return 'Network error occurred. Please try again.';
+    }
+
+    // Handle HTTP errors with specific messages
+    const statusCode = error.response?.status;
+    const serverMessage = error.response?.data?.error || error.response?.data?.message;
+    
+    switch (statusCode) {
+      case 400:
+        return serverMessage || 'Invalid request. Please check your input.';
+      case 401:
+        return 'Your session has expired. Please log in again.';
+      case 403:
+        return 'You are not authorized to make offers.';
+      case 404:
+        return 'This animal listing is no longer available.';
+      case 409:
+        return serverMessage || 'You already have an active negotiation for this animal.';
+      case 422:
+        return serverMessage || 'Validation error. Please check your input.';
+      case 429:
+        return 'Too many requests. Please wait a moment before trying again.';
+      case 500:
+        return 'Server error. Please try again later.';
+      case 503:
+        return 'Service temporarily unavailable. Please try again later.';
+      default:
+        return serverMessage || 'Failed to submit offer. Please try again.';
+    }
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
       return;
     }
 
-    if (amount > animal.price * 1.2) {
-      toast.error('Offer cannot exceed 120% of asking price');
-      return;
-    }
+    const amount = parseFloat(offerAmount);
 
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
     setIsLoading(true);
+    setLastError(null);
 
     try {
       const response = await api.post('/bargain/sessions', {
         animal_id: animal.id,
         offer_amount: amount,
         message: message || `I'm interested in buying this ${animal.species} for KES ${amount.toLocaleString()}`
+      }, {
+        signal: abortControllerRef.current.signal,
+        timeout: 10000 // 10 second timeout
       });
 
       setStep('success');
+      setRetryCount(0);
       toast.success('Offer submitted successfully!');
     } catch (error) {
-      const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Failed to submit offer';
-      toast.error(errorMsg);
-      setStep('error');
+      // Don't handle if request was intentionally aborted
+      if (error.name === 'AbortError') {
+        return;
+      }
+
+      const errorMessage = parseError(error);
+      setLastError(errorMessage);
+      
+      // Check if we should retry
+      const shouldRetry = 
+        retryCount < MAX_RETRIES && 
+        (error.code === 'ECONNABORTED' || !error.response || error.response?.status >= 500);
+      
+      if (shouldRetry) {
+        setRetryCount(prev => prev + 1);
+        toast.loading('Retrying...', { id: 'retry-toast' });
+      } else {
+        setStep('error');
+        toast.error(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Handle retry action
+  const handleRetry = async () => {
+    toast.dismiss('retry-toast');
+    setStep('form');
+    setRetryCount(0);
+    setLastError(null);
   };
 
   const handleClose = () => {
@@ -62,19 +194,40 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
     setMessage('');
     setStep('form');
     setIsLoading(false);
+    setErrors({});
+    setRetryCount(0);
+    setLastError(null);
+    // Restore focus to previously active element
+    if (previousActiveElement.current) {
+      previousActiveElement.current.focus();
+    }
+    // Abort any pending requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="bargain-modal-title"
+    >
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
         onClick={handleClose}
+        aria-hidden="true"
       />
       
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div 
+        ref={modalRef}
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in duration-200"
+        role="document"
+      >
         {/* Header */}
         <div className="bg-green-600 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -82,13 +235,14 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
               <MessageCircle className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-white font-semibold">Make an Offer</h3>
+              <h3 id="bargain-modal-title" className="text-white font-semibold">Make an Offer</h3>
               <p className="text-green-100 text-sm">Negotiate the price</p>
             </div>
           </div>
           <button 
             onClick={handleClose}
             className="text-white/80 hover:text-white transition-colors"
+            aria-label="Close modal"
           >
             <X className="w-6 h-6" />
           </button>
@@ -97,14 +251,14 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
         {/* Content */}
         <div className="p-6">
           {step === 'form' ? (
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               {/* Animal Info */}
               <div className="bg-slate-50 rounded-lg p-4 mb-4">
                 <div className="flex items-center gap-3">
                   {animal.image_url && (
                     <img 
                       src={animal.image_url} 
-                      alt={animal.species}
+                      alt={`${animal.species} - ${animal.breed}`}
                       className="w-16 h-16 object-cover rounded-lg"
                     />
                   )}
@@ -119,38 +273,70 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
 
               {/* Offer Amount */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="offerAmount" className="block text-sm font-medium text-slate-700 mb-2">
                   Your Offer (KES)
                 </label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" aria-hidden="true" />
                   <input
+                    id="offerAmount"
                     type="number"
                     value={offerAmount}
-                    onChange={(e) => setOfferAmount(e.target.value)}
+                    onChange={(e) => {
+                      setOfferAmount(e.target.value);
+                      if (errors.amount) setErrors(prev => ({ ...prev, amount: null }));
+                    }}
                     placeholder="Enter your offer"
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg"
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg ${
+                      errors.amount ? 'border-red-300 bg-red-50' : 'border-slate-300'
+                    }`}
                     min="1"
                     max={animal.price * 1.2}
+                    aria-describedby={errors.amount ? "offer-error" : "offer-hint"}
+                    aria-invalid={!!errors.amount}
                   />
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Suggested: KES {Math.round(animal.price * 0.85).toLocaleString()} - KES {Math.round(animal.price * 0.95).toLocaleString()}
-                </p>
+                {errors.amount ? (
+                  <p id="offer-error" className="text-xs text-red-500 mt-1 flex items-center gap-1" role="alert">
+                    <AlertCircle className="w-3 h-3" aria-hidden="true" />
+                    {errors.amount}
+                  </p>
+                ) : (
+                  <p id="offer-hint" className="text-xs text-slate-500 mt-1">
+                    Suggested: KES {Math.round(animal.price * 0.85).toLocaleString()} - KES {Math.round(animal.price * 0.95).toLocaleString()}
+                  </p>
+                )}
               </div>
 
               {/* Message */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="message" className="block text-sm font-medium text-slate-700 mb-2">
                   Message to Farmer (Optional)
+                  <span className="text-slate-400 font-normal ml-2">
+                    ({message.length}/500)
+                  </span>
                 </label>
                 <textarea
+                  id="message"
                   value={message}
-                  onChange={(e) => setMessage(e.target.value)}
+                  onChange={(e) => {
+                    setMessage(e.target.value);
+                    if (errors.message) setErrors(prev => ({ ...prev, message: null }));
+                  }}
                   placeholder="Tell the farmer why you're interested..."
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none ${
+                    errors.message ? 'border-red-300 bg-red-50' : 'border-slate-300'
+                  }`}
                   rows={3}
+                  aria-describedby={errors.message ? "message-error" : "message-hint"}
+                  aria-invalid={!!errors.message}
                 />
+                {errors.message && (
+                  <p id="message-error" className="text-xs text-red-500 mt-1 flex items-center gap-1" role="alert">
+                    <AlertCircle className="w-3 h-3" aria-hidden="true" />
+                    {errors.message}
+                  </p>
+                )}
               </div>
 
               {/* Submit Button */}
@@ -158,15 +344,16 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
                 type="submit"
                 disabled={isLoading || !offerAmount}
                 className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                aria-busy={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Submitting...
+                    <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
+                    <span>Submitting...</span>
                   </>
                 ) : (
                   <>
-                    <MessageCircle className="w-5 h-5" />
+                    <MessageCircle className="w-5 h-5" aria-hidden="true" />
                     Submit Offer
                   </>
                 )}
@@ -203,17 +390,40 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
                 <AlertCircle className="w-8 h-8 text-red-600" />
               </div>
               <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                Something went wrong
+                {lastError?.includes('network') || lastError?.includes('connect') ? 'Connection Error' : 'Something went wrong'}
               </h3>
-              <p className="text-slate-600 mb-6">
-                Please try again or contact support.
+              <p className="text-slate-600 mb-6 max-w-sm mx-auto">
+                {lastError || 'An unexpected error occurred. Please try again or contact support.'}
               </p>
-              <button
-                onClick={() => setStep('form')}
-                className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-all"
-              >
-                Try Again
-              </button>
+              
+              {retryCount > 0 && (
+                <div className="mb-4 p-3 bg-orange-50 rounded-lg max-w-sm mx-auto">
+                  <p className="text-sm text-orange-700">
+                    Retry attempt {retryCount} of {MAX_RETRIES}
+                  </p>
+                </div>
+              )}
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={handleRetry}
+                  className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                  disabled={isLoading}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Try Again
+                </button>
+                <button
+                  onClick={handleClose}
+                  className="flex-1 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+              
+              <p className="text-xs text-slate-500 mt-4">
+                If the problem persists, please contact our support team.
+              </p>
             </div>
           )}
         </div>

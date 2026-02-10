@@ -103,7 +103,8 @@ function LivestockDetails() {
       navigate('/auth');
       return;
     }
-    toast.success('Opening chat with farmer...');
+    // Navigate to negotiation page
+    navigate(`/negotiation/${id}/${animal?.farmer_id}`);
   };
 
   // Loading skeleton
@@ -153,10 +154,10 @@ function LivestockDetails() {
             <Shield className="w-16 h-16 text-red-300 mx-auto mb-4" />
             <p className="text-red-600 mb-4">{error}</p>
             <Link
-              to="/marketplace"
+              to="/browse"
               className="inline-block px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
             >
-              Back to Marketplace
+              Back to Browse
             </Link>
           </div>
         </div>
@@ -171,9 +172,9 @@ function LivestockDetails() {
         <nav className="flex items-center gap-2 mb-6 text-sm">
           <Link to="/" className="text-slate-500 hover:text-slate-700">Home</Link>
           <ChevronRight className="w-4 h-4 text-slate-400" />
-          <Link to="/marketplace" className="text-slate-500 hover:text-slate-700">Marketplace</Link>
+          <Link to="/browse" className="text-slate-500 hover:text-slate-700">Browse</Link>
           <ChevronRight className="w-4 h-4 text-slate-400" />
-          <Link to={`/marketplace?category=${animal?.species}`} className="text-slate-500 hover:text-slate-700">
+          <Link to={`/browse?category=${animal?.species}`} className="text-slate-500 hover:text-slate-700">
             {animal?.species || 'Category'}
           </Link>
           <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -380,7 +381,7 @@ function LivestockDetails() {
                         <p className="text-sm text-slate-500">{animal?.farm_name || 'Farm Name'}</p>
                       </div>
                       <button
-                        onClick={handleMessageFarmer}
+                        onClick={() => navigate(`/negotiation/${id}/${animal?.farmer_id}`)}
                         className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700"
                       >
                         Contact
