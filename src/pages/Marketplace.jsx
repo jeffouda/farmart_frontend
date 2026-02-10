@@ -74,3 +74,41 @@ function Marketplace() {
       String(item.animal?.id) === String(id) || String(item.animal_id) === String(id)
     );
   };
+
+  // Handle add to cart
+  const handleAddToCart = (id) => {
+    if (!currentUser) {
+      toast.error('Please login to add items to cart');
+      navigate('/auth');
+      return;
+    }
+
+    const item = livestock.find(l => String(l.id) === String(id));
+    if (item) {
+      dispatch(addToCart({
+        id: item.id,
+        name: ${item.species} - ${item.breed},
+        price: item.price,
+        image: item.image_url || item.image
+      }));
+      toast.success('Added to cart!');
+    }
+  };
+
+  // Handle toggle wishlist
+  const handleToggleWishlist = (id) => {
+    if (!currentUser) {
+      toast.error('Please login to save items');
+      navigate('/auth');
+      return;
+    }
+
+    if (isInWishlist(id)) {
+      dispatch(optimisticRemoveFromWishlist(id));
+      dispatch(removeFromWishlist(id));
+      toast.success('Removed from wishlist');
+    } else {
+      dispatch(addToWishlist(id));
+      toast.success('Added to wishlist!');
+    }
+  };
