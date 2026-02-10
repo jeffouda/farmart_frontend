@@ -8,20 +8,16 @@ Add the Farmer Rating section to LeaveReview.jsx and push multiple commits to Gi
 - Currently on branch `gianna`
 - Has history of commits for LeaveReview
 
-## Plan
-1. Add Farmer Rating section to LeaveReview.jsx
-2. Make separate commits for each improvement
-3. Push to GitHub
+## Commits Created
+1. ✅ **feat: Add farmer rating section to LeaveReview component** - Add separate farmer rating state and UI
+2. ✅ **fix: Add ARIA labels and accessibility improvements** - Add proper ARIA attributes
+3. ✅ **style: Add visual enhancements and focus states** - Add transitions and focus rings
+4. ✅ **test: Add enhanced validation and error handling** - Max length and error logging
 
-## Commits to Create
-1. **feat: Add farmer rating section to LeaveReview component** - Add separate farmer rating state and UI
-2. **fix: Fix star rating hover state conflict** - Ensure farmer rating uses separate hover state
-3. **docs: Update component documentation** - Add JSDoc comments
-4. **refactor: Improve accessibility labels** - Add ARIA labels for screen readers
-5. **style: Enhance visual feedback** - Add transition effects to buttons
-6. **test: Add validation for farmer rating** - Ensure farmer rating is optional but functional
+## Status
+- ✅ All commits pushed to origin/gianna
+- ✅ Ready for PR creation
 
-## Follow-up
-- Push all commits to origin/gianna
-- Create PR for merging to main
+## PR Link
+https://github.com/giannarashid123/farmart_frontend/pull/new/gianna
 
