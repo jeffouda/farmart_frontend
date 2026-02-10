@@ -249,3 +249,70 @@ function Marketplace() {
               </select>
             </div>
 
+            {/* Sort By */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Sort By</h3>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Grid (75%) */}
+        <main className="flex-1">
+          {/* Results count */}
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-sm text-slate-500">
+              Showing <span className="font-semibold text-slate-900">{livestock.length}</span> animals
+            </p>
+          </div>
+
+          {/* Loading State */}
+          {loading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
+          )}
+
+          {/* Error State */}
+          {!loading && error && (
+            <div className="bg-white rounded-xl p-12 text-center">
+              <p className="text-red-600 mb-4">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loading && !error && livestock.length === 0 && (
+            <div className="bg-white rounded-xl p-12 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Filter className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                No animals found matching your filters
+              </h3>
+              <p className="text-slate-500 mb-4">Try adjusting your filters or search query</p>
+              <button
+                onClick={clearFilters}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Clear Filters
+              </button>
+            </div>
+          )}
+
+
