@@ -29,3 +29,44 @@ const Checkout = () => {
 
   const items = bargainOrder?.items || cartItems;
   const total = bargainOrder?.total_amount || totalAmount;
+
+    useEffect(() => {
+    if (orderId) {
+      fetchBargainOrder();
+    }
+  }, [orderId]);
+
+  const fetchBargainOrder = async () => {
+    setLoadingOrder(true);
+    try {
+      const response = await api.get(`/orders/${orderId}`);
+      console.log("🏷️ Fetched bargain order:", response.data);
+
+      if (response.data.status === 'paid' || response.data.status === 'completed') {
+        toast.error('This order has already been paid!');
+        navigate('/dashboard/orders');
+        return;
+      }
+
+      setBargainOrder(response.data);
+    } catch (error) {
+      console.error("Failed to fetch order:", error);
+      toast.error('Failed to load order details');
+    } finally {
+      setLoadingOrder(false);
+    }
+  };
+
+  const formatPrice = (price) => {
+    return `KSh ${price.toLocaleString()}`;
+  };
+
+  const shippingCost = total > 50000 ? 0 : 1500;
+  const grandTotal = total + shippingCost;
+
+  useEffect(() => {
+    if (!orderId && cartItems.length === 0 && !loadingOrder) {
+      toast.error('Your cart is empty');
+      navigate('/marketplace');
+    }
+  }, [cartItems, orderId, loadingOrder, navigate]);
