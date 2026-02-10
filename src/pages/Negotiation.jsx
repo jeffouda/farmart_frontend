@@ -54,6 +54,26 @@ function Negotiation() {
       }
     };
   }, [livestockId]);
+ // Send message
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+
+    setSending(true);
+    try {
+      await api.post(/negotiation/${livestockId}, {
+        content: newMessage.trim(),
+        receiver_id: receiverId,
+      });
+      setNewMessage('');
+      fetchMessages();
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      toast.error('Failed to send message');
+    } finally {
+      setSending(false);
+    }
+  };
 
 
 
