@@ -122,3 +122,41 @@ const FarmerRaiseDispute = () => {
       return;
     }
 
+     if (!resolution) {
+      toast.error('Please select what you want as resolution');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      // Create FormData for multipart/form-data
+      const formData = new FormData();
+      formData.append('order_id', orderId || '');
+      formData.append('buyer_name', buyerName);
+      formData.append('reason', reason);
+      formData.append('description', description);
+      formData.append('resolution', resolution);
+      formData.append('dispute_type', 'farmer_report'); // Mark as farmer report
+      
+      if (evidence) {
+        formData.append('evidence', evidence);
+      }
+
+      const res = await api.post('/disputes', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      setTicketId(res.data.ticket_id || 'DSP-' + Date.now());
+      setSubmitted(true);
+      toast.success('Report submitted successfully');
+
+    } catch (err) {
+      console.error('Failed to submit dispute:', err);
+      toast.error(err.response?.data?.message || 'Failed to submit report');
+    } finally {
+      setSubmitting(false);
+    }
+  };
