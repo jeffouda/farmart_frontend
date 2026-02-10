@@ -31,7 +31,74 @@ const ConfirmDeliveryModal = ({ order, onClose, onConfirmed }) => {
     );
   };
 
-  {/* Content */}
+  const handleConfirmDelivery = async () => {
+    if (confirming) return;
+    setConfirming(true);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setCompleted(true);
+      toast.success('Delivery confirmed successfully!');
+      
+      if (onConfirmed) onConfirmed();
+      setStep(2);
+    } catch (error) {
+      toast.error('Failed to confirm delivery. Please try again.');
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (submitting || rating === 0) return;
+    setSubmitting(true);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      toast.success('Thank you for your review!');
+      onClose();
+    } catch (error) {
+      toast.error('Failed to submit review. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSkip = () => {
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-100 rounded-full">
+              <PackageCheck className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">
+                {completed ? 'Review Your Order' : 'Confirm Delivery'}
+              </h2>
+              <p className="text-sm text-gray-500">
+                {completed ? 'Share your feedback' : 'Step 1 of 2'}
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        {/* Content */}
         <div className="p-6">
           {/* Step 1: Confirmation */}
           {step === 1 && (
@@ -103,3 +170,108 @@ const ConfirmDeliveryModal = ({ order, onClose, onConfirmed }) => {
                   {rating === 5 && 'Excellent'}
                 </p>
               </div>
+
+              {/* Quick Tags */}
+              <div>
+                <p className="text-sm font-semibold text-gray-700 mb-3">What went well?</p>
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_TAGS.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => handleTagToggle(tag)}
+                      disabled={submitting}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        selectedTags.includes(tag)
+                          ? 'bg-green-100 text-green-700 border border-green-200'
+                          : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                      } disabled:opacity-50`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Feedback */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Leave a note (optional)
+                </label>
+                <textarea
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  placeholder="Tell us more about your experience..."
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  disabled={submitting}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex items-center justify-end gap-3">
+          {step === 1 ? (
+            <>
+              <button
+                onClick={onClose}
+                disabled={confirming}
+                className="px-4 py-2 text-gray-700 font-medium hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelivery}
+                disabled={confirming}
+                className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {confirming ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Confirming...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Yes, I Received It
+                  </>
+                )}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleSkip}
+                disabled={submitting}
+                className="px-4 py-2 text-gray-500 font-medium hover:text-gray-700 transition-colors disabled:opacity-50"
+              >
+                Skip
+              </button>
+              <button
+                onClick={handleSubmitReview}
+                disabled={submitting || rating === 0}
+                className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <ThumbsUp className="w-4 h-4" />
+                    Submit Review
+                  </>
+                )}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ConfirmDeliveryModal;
