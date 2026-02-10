@@ -13,6 +13,7 @@ import {
   Check,
   Loader2,
   Smartphone,
+  ShoppingCart,
 } from "lucide-react";
 
 const KENYAN_COUNTIES = [
@@ -125,12 +126,54 @@ const Checkout = () => {
     }
   };
 
-  // UPDATED CALCULATION: Flat 1 KSh shipping
-  const formatPrice = (price) => `KSh ${Number(price).toLocaleString()}`;
-  const shippingCost = 1;
-  const grandTotal = baseTotal + shippingCost;
+const formatPrice = (price) => `KSh ${Number(price).toLocaleString()}`;
 
-  const handleChange = (e) => {
+const shippingCost = baseTotal > 50000 ? 0 : 1500;
+const grandTotal = baseTotal + shippingCost;
+
+useEffect(() => {
+  if (!orderId && cartItems.length === 0 && !loadingOrder) {
+    toast.error("Your cart is empty");
+    navigate("/marketplace");
+  }
+}, [cartItems, orderId, loadingOrder, navigate]);
+
+if (loadingOrder) {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="text-center">
+        <Loader2 className="w-12 h-12 text-green-600 animate-spin mx-auto mb-4" />
+        <p className="text-slate-600 font-medium">Loading order details...</p>
+      </div>
+    </div>
+  );
+}
+
+if (items.length === 0) {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="text-center">
+        <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">
+          {bargainOrder ? "No items in order" : "Your cart is empty"}
+        </h2>
+        <p className="text-slate-500 mb-6">
+          {bargainOrder
+            ? "The order has no items."
+            : "Add some livestock to your cart before checking out."}
+        </p>
+        <Link
+          to={bargainOrder ? "/dashboard/orders" : "/marketplace"}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
+          <ArrowLeft size={20} />
+          {bargainOrder ? "Back to Orders" : "Browse Marketplace"}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+    const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
@@ -138,8 +181,15 @@ const Checkout = () => {
 
   const validateForm = () => {
     const newErrors = {};
+    
     if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
 
+    if (!formData.email.trim()) {
+  newErrors.email = "Email is required";
+} 
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+  newErrors.email = "Invalid email format";
+}
     const phone = formData.phone.trim();
     const phoneRegex = /^(?:254|\+254|0)?(7|1)\d{8}$/;
     if (!phone) {
@@ -148,8 +198,8 @@ const Checkout = () => {
       newErrors.phone = "Enter a valid M-Pesa number";
     }
 
-    if (!formData.county) newErrors.county = "County is required";
-    if (!formData.town.trim()) newErrors.town = "Town is required";
+    if (!formData.county) newErrors.county = 'County is required';
+    if (!formData.town.trim()) newErrors.town = 'Town/Location is required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -166,11 +216,15 @@ const Checkout = () => {
         const status = response.data.status;
 
         if (status === "paid" || status === "delivered") {
-          clearInterval(interval);
-          toast.success("Payment confirmed!", { id: toastId });
-          if (!bargainOrder) dispatch(clearCart());
-          navigate(`/order-confirmation/${id}`);
-        } else if (status === "failed" || attempts >= maxAttempts) {
+        clearInterval(interval);
+        setIsWaitingForMpesa(false);
+        setSubmitting(false);
+        toast.success("Payment confirmed!", { id: toastId });
+        if (!bargainOrder) dispatch(clearCart());
+        navigate(`/order-confirmation/${id}`);
+        } 
+        
+        else if (status === "failed" || attempts >= maxAttempts) {
           clearInterval(interval);
           setIsWaitingForMpesa(false);
           setSubmitting(false);
@@ -183,6 +237,8 @@ const Checkout = () => {
         console.error("Polling error", err);
       }
     }, 5000);
+    
+    return interval;
   };
 
   const handlePlaceOrder = async () => {
@@ -192,8 +248,9 @@ const Checkout = () => {
     const loadingToastId = toast.loading("Processing...");
 
     try {
-      const orderPayload = {
-        items: items.map((item) => ({
+       
+    const orderPayload = {
+          items: items.map((item) => ({
           animal_id: item.animal_id || item.id,
           quantity: item.quantity || 1,
           price: item.price,
@@ -208,7 +265,9 @@ const Checkout = () => {
       if (bargainOrder) {
         await api.put(`/orders/${bargainOrder.id}`, orderPayload);
         currentOrderId = bargainOrder.id;
-      } else {
+      } 
+      
+      else {
         const response = await api.post("/orders/", orderPayload);
         currentOrderId = response.data.order_id || response.data.order?.id;
       }
@@ -219,30 +278,31 @@ const Checkout = () => {
           id: loadingToastId,
         });
         pollPaymentStatus(currentOrderId, loadingToastId);
-      } else {
+      } 
+      
+      else {
         toast.success(
           "Farmart: Payment Received! Your animal is now secured!!",
           { id: loadingToastId },
         );
-        if (!bargainOrder) dispatch(clearCart());
+        
+       if (!bargainOrder) dispatch(clearCart());
         navigate(`/order-confirmation/${currentOrderId}`);
       }
-    } catch (error) {
-      setSubmitting(false);
-      toast.error(error.response?.data?.message || "Something went wrong", {
-        id: loadingToastId,
-      });
-    }
+    } 
+        catch (error) {
+        setSubmitting(false);
+        toast.error(
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to place order. Please try again.",
+        { id: loadingToastId },
+  );
+     }
   };
 
-  if (loadingOrder)
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin text-green-600" size={40} />
-      </div>
-    );
 
-  return (
+    return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       {isWaitingForMpesa && (
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -288,8 +348,8 @@ const Checkout = () => {
                     placeholder="07XXXXXXXX"
                     value={formData.phone}
                     onChange={handleChange}
-                    className={`w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${errors.phone ? "border-red-500" : "border-slate-200"}`}
-                  />
+                    className={`w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${errors.phone ? "border-red-500" : "border-slate-200"}`} 
+                    />
                 </div>
                 <div>
                   <label className="text-sm font-semibold">Full Name *</label>
