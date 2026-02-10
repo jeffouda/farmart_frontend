@@ -120,3 +120,163 @@ const StatusBadge = ({ status }) => {
     </span>
   );
 };
+
+// Action Menu Component
+const ActionMenu = ({ user, onAction }) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors"
+      >
+        <MoreVertical size={18} />
+      </button>
+
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute right-0 mt-1 w-48 bg-slate-800 rounded-lg shadow-lg border border-slate-700 z-20 overflow-hidden">
+            {user.status === "pending" && (
+              <button
+                onClick={() => {
+                  onAction("verify", user);
+                  setOpen(false);
+                }}
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-left text-sm text-green-400 hover:bg-slate-700"
+              >
+                <CheckCircle size={16} />
+                Verify Farmer
+              </button>
+            )}
+            <button
+              onClick={() => {
+                onAction("view", user);
+                setOpen(false);
+              }}
+              className="flex items-center gap-2 w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-slate-700"
+            >
+              <Eye size={16} />
+              View Details
+            </button>
+            {user.status !== "suspended" && (
+              <button
+                onClick={() => {
+                  onAction("suspend", user);
+                  setOpen(false);
+                }}
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-slate-700"
+              >
+                <Ban size={16} />
+                {user.status === "pending" ? "Reject" : "Suspend"}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// User Details Modal
+const UserDetailsModal = ({ user, onClose }) => {
+  if (!user) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative bg-slate-800 rounded-xl w-full max-w-md border border-slate-700 shadow-xl">
+        <div className="flex items-center justify-between p-4 border-b border-slate-700">
+          <h3 className="text-lg font-semibold text-white">User Details</h3>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
+              {user.name.charAt(0)}
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-white">{user.name}</h4>
+              <p className="text-slate-400 text-sm">{user.email}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-slate-700/50 rounded-lg p-3">
+              <p className="text-slate-400 text-xs">Status</p>
+              <StatusBadge status={user.status} />
+            </div>
+            <div className="bg-slate-700/50 rounded-lg p-3">
+              <p className="text-slate-400 text-xs">Join Date</p>
+              <p className="text-white font-medium">{user.joinDate}</p>
+            </div>
+          </div>
+
+          <div className="bg-slate-700/50 rounded-lg p-3">
+            <p className="text-slate-400 text-xs">Location</p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <MapPin size={14} className="text-slate-400" />
+              <span className="text-white">{user.location}</span>
+            </div>
+          </div>
+
+          {user.rating !== undefined && (
+            <div className="bg-slate-700/50 rounded-lg p-3">
+              <p className="text-slate-400 text-xs">Rating</p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <Star size={14} className="text-amber-400 fill-amber-400" />
+                <span className="text-white font-medium">
+                  {user.rating > 0 ? user.rating : "No ratings yet"}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {user.livestockCount !== undefined && (
+            <div className="bg-slate-700/50 rounded-lg p-3">
+              <p className="text-slate-400 text-xs">Livestock Listed</p>
+              <p className="text-white font-medium">{user.livestockCount} animals</p>
+            </div>
+          )}
+
+          {user.totalOrders !== undefined && (
+            <div className="bg-slate-700/50 rounded-lg p-3">
+              <p className="text-slate-400 text-xs">Total Orders</p>
+              <p className="text-white font-medium">{user.totalOrders} orders</p>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t border-slate-700 flex gap-3">
+          {user.status === "pending" && (
+            <button
+              onClick={() => {
+                toast.success(`${user.name} has been verified!`);
+                onClose();
+              }}
+              className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Verify Farmer
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
