@@ -253,3 +253,220 @@ const FarmerAnalytics = () => {
       </div>
     );
   }
+  
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900">Analytics</h1>
+          <p className="text-slate-400 text-sm font-medium">
+            Track your sales performance and trends
+          </p>
+        </div>
+
+        {/* Date Range Dropdown */}
+        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm">
+          <Calendar size={16} className="text-slate-400" />
+          <select
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value)}
+            className="text-sm font-medium text-slate-700 bg-transparent border-none focus:outline-none"
+          >
+            <option value="day">Today</option>
+            <option value="week">Last 7 Days</option>
+            <option value="month">Last 30 Days</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Key Metrics Cards */}
+      <div className="flex gap-6 mb-10 flex-wrap">
+        <AnalyticCard
+          title="Total Revenue"
+          value={loading ? "" : formatCurrency(calculatedMetrics.totalRevenue)}
+          change="+18.2%"
+          color="bg-blue-600"
+          icon={DollarSign}
+          loading={loading}
+        />
+        <AnalyticCard
+          title="Total Orders"
+          value={loading ? "" : calculatedMetrics.totalOrders.toString()}
+          change="+12.5%"
+          color="bg-amber-500"
+          icon={ShoppingCart}
+          loading={loading}
+        />
+        <AnalyticCard
+          title="Avg Order Value"
+          value={loading ? "" : formatCurrency(calculatedMetrics.avgOrderValue)}
+          change="+8.3%"
+          color="bg-green-500"
+          icon={TrendingUp}
+          loading={loading}
+        />
+        <AnalyticCard
+          title="Customer Rating"
+          value={loading ? "" : `${calculatedMetrics.avgRating}/5`}
+          change="+5.1%"
+          color="bg-purple-600"
+          icon={Star}
+          loading={loading}
+        />
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Revenue Trend Chart */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-50">
+          <h2 className="text-lg font-black text-slate-900 mb-6">Revenue Trend</h2>
+          {loading ? (
+            <div className="h-[300px] flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+            </div>
+          ) : (
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={revenueTrendData}>
+                  <defs>
+                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={COLORS.revenue} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={COLORS.revenue} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} />
+                  <YAxis
+                    stroke="#94a3b8"
+                    fontSize={12}
+                    tickLine={false}
+                    tickFormatter={(value) => `KES ${(value / 1000).toFixed(0)}K`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#fff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                    }}
+                    formatter={(value, name) => [
+                      name === "revenue" ? `KES ${value.toLocaleString()}` : value,
+                      name === "revenue" ? "Revenue" : "Orders",
+                    ]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke={COLORS.revenue}
+                    strokeWidth={2}
+                    fill="url(#revenueGradient)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        {/* Order Status Pie Chart */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-50">
+          <h2 className="text-lg font-black text-slate-900 mb-6">Order Status</h2>
+          {loading ? (
+            <div className="h-[300px] flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+            </div>
+          ) : (
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={orderStatusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {orderStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#fff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={36}
+                    formatter={(value) => <span className="text-sm text-slate-600">{value}</span>}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Center total */}
+              <div className="text-center -mt-8">
+                <p className="text-3xl font-black text-slate-900">{calculatedMetrics.totalOrders}</p>
+                <p className="text-sm text-slate-500">Total Orders</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Additional Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-green-700 font-medium">Completed Orders</p>
+            <div className="w-10 h-10 bg-green-200 rounded-lg flex items-center justify-center">
+              <CheckCircle size={20} className="text-green-600" />
+            </div>
+          </div>
+          <p className="text-3xl font-black text-green-800">{calculatedMetrics.completedOrders}</p>
+          <p className="text-sm text-green-600 mt-1">Successfully delivered</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-blue-700 font-medium">Active Orders</p>
+            <div className="w-10 h-10 bg-blue-200 rounded-lg flex items-center justify-center">
+              <Clock size={20} className="text-blue-600" />
+            </div>
+          </div>
+          <p className="text-3xl font-black text-blue-800">{calculatedMetrics.activeOrders}</p>
+          <p className="text-sm text-blue-600 mt-1">In progress</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-purple-700 font-medium">Customer Satisfaction</p>
+            <div className="w-10 h-10 bg-purple-200 rounded-lg flex items-center justify-center">
+              <Star size={20} className="text-purple-600" />
+            </div>
+          </div>
+          <p className="text-3xl font-black text-purple-800">{calculatedMetrics.avgRating}/5</p>
+          <p className="text-sm text-purple-600 mt-1">Based on {reviews.length} reviews</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Helper components for empty state
+const CheckCircle = ({ size, className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <polyline points="22 4 12 14.01 9 11.01" />
+  </svg>
+);
+
+const Clock = ({ size, className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+);
+
+export default FarmerAnalytics;
