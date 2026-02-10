@@ -149,3 +149,107 @@ const FarmerAnalytics = () => {
     cancelled: COLORS.cancelled,
     completed: COLORS.delivered,
   };
+
+    // Calculate metrics from orders/reviews if not set by analytics endpoint
+  const calculatedMetrics = useMemo(() => {
+    if (metrics.totalRevenue !== undefined && Object.keys(metrics).length > 0) {
+      return {
+        ...metrics,
+        avgRating: metrics.avgRating?.toFixed?.(1) || metrics.avgRating || "0.0",
+      };
+    }
+
+    if (orders.length === 0) {
+      return {
+        totalRevenue: 0,
+        totalOrders: 0,
+        avgOrderValue: 0,
+        avgRating: "0.0",
+        completedOrders: 0,
+        activeOrders: 0,
+      };
+    }
+
+    const completedOrders = orders.filter((o) => ["delivered", "completed"].includes(o.status?.toLowerCase()));
+    const totalRevenue = completedOrders.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+    const avgOrderValue = completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0;
+    const avgRating = reviews.length > 0 ? reviews.reduce((sum, r) => sum + (parseFloat(r.rating) || 0), 0) / reviews.length : 0;
+    const activeOrders = orders.filter((o) => !["delivered", "completed", "cancelled"].includes(o.status?.toLowerCase()));
+
+    return {
+      totalRevenue,
+      totalOrders: orders.length,
+      avgOrderValue,
+      avgRating: avgRating.toFixed(1),
+      completedOrders: completedOrders.length,
+      activeOrders: activeOrders.length,
+    };
+  }, [orders, reviews, metrics]);
+
+  // Use revenue trend from backend or calculate locally
+  const revenueTrendData = useMemo(() => {
+    if (revenueTrend.length > 0) {
+      return revenueTrend.map(item => ({
+        ...item,
+        date: item.date,
+      }));
+    }
+
+    // Calculate locally if not provided
+    const days = [];
+    const now = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split("T")[0];
+
+      const dayOrders = orders.filter((o) => {
+        const orderDate = new Date(o.created_at).toISOString().split("T")[0];
+        return orderDate === dateStr && ["delivered", "completed"].includes(o.status?.toLowerCase());
+      });
+
+      const dayRevenue = dayOrders.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+
+      days.push({
+        date: date.toLocaleDateString("en-US", { weekday: "short", day: "numeric" }),
+        revenue: dayRevenue,
+        orders: dayOrders.length,
+      });
+    }
+
+    return days;
+  }, [revenueTrend, orders]);
+
+  // Format currency
+  const formatCurrency = (value) => {
+    if (value >= 1000000) {
+      return `KES ${(value / 1000000).toFixed(2)} M`;
+    } else if (value >= 1000) {
+      return `KES ${(value / 1000).toFixed(0)}K`;
+    }
+    return `KES ${value.toLocaleString()}`;
+  };
+
+  // Empty state
+  if (!loading && orders.length === 0) {
+    return (
+      <div>
+        <h1 className="text-2xl font-black text-slate-900">Analytics</h1>
+        <p className="text-slate-400 text-sm mb-8 font-medium">
+          Track your sales performance and trends
+        </p>
+
+        <div className="bg-white rounded-xl shadow-sm p-12 text-center border border-slate-50">
+          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <TrendingUp size={40} className="text-slate-300" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">No sales yet</h2>
+          <p className="text-slate-500 max-w-md mx-auto">
+            Your sales analytics will appear here once you start making sales.
+            Browse your orders page to track pending transactions.
+          </p>
+        </div>
+      </div>
+    );
+  }
