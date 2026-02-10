@@ -41,6 +41,19 @@ function Negotiation() {
       setLoading(false);
     }
   };
+   // Initial fetch and polling
+  useEffect(() => {
+    fetchMessages();
+
+    // Poll every 3 seconds for new messages
+    pollingRef.current = setInterval(fetchMessages, 3000);
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
+  }, [livestockId]);
 
 
 
