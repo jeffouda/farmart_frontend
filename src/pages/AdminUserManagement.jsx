@@ -280,3 +280,48 @@ const UserDetailsModal = ({ user, onClose }) => {
     </div>
   );
 };
+
+// Table Row Component
+const UserTableRow = ({ user, type, onAction }) => (
+  <tr className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors">
+    <td className="px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 bg-slate-700 rounded-full flex items-center justify-center text-white font-medium">
+          {user.name.charAt(0)}
+        </div>
+        <div>
+          <p className="text-white font-medium">{user.name}</p>
+          <p className="text-slate-400 text-sm">{user.email}</p>
+        </div>
+      </div>
+    </td>
+    <td className="px-4 py-3">
+      <div className="flex items-center gap-1 text-slate-300">
+        <MapPin size={14} className="text-slate-500" />
+        {user.location}
+      </div>
+    </td>
+    <td className="px-4 py-3">
+      <StatusBadge status={user.status} />
+    </td>
+    <td className="px-4 py-3">
+      {type === "farmer" ? (
+        <div className="flex items-center gap-1 text-amber-400">
+          <Star size={14} className="fill-amber-400" />
+          <span className="text-white">{user.rating > 0 ? user.rating : "—"}</span>
+        </div>
+      ) : (
+        <span className="text-white">{user.totalOrders}</span>
+      )}
+    </td>
+    <td className="px-4 py-3">
+      <div className="flex items-center gap-1 text-slate-400 text-sm">
+        <Calendar size={14} />
+        {user.joinDate}
+      </div>
+    </td>
+    <td className="px-4 py-3">
+      <ActionMenu user={user} onAction={onAction} />
+    </td>
+  </tr>
+);
