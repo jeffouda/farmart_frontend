@@ -10,32 +10,44 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState('form'); // 'form', 'success', 'error'
+  const [errors, setErrors] = useState({});
 
   if (!isOpen || !animal) return null;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const validateForm = () => {
+    const newErrors = {};
     
     if (!isAuthenticated) {
-      toast.error('Please log in to make an offer');
-      return;
-    }
-
-    if (currentUser?.role !== 'buyer') {
-      toast.error('Only buyers can make offers');
-      return;
+      newErrors.auth = 'Please log in to make an offer';
+    } else if (currentUser?.role !== 'buyer') {
+      newErrors.role = 'Only buyers can make offers';
     }
 
     const amount = parseFloat(offerAmount);
     if (!amount || amount <= 0) {
-      toast.error('Please enter a valid offer amount');
+      newErrors.amount = 'Please enter a valid offer amount greater than 0';
+    } else if (amount > animal.price * 1.2) {
+      newErrors.amount = `Offer cannot exceed 120% of asking price (KES ${Math.round(animal.price * 1.2).toLocaleString()})`;
+    } else if (amount < animal.price * 0.5) {
+      newErrors.amount = 'Offer is too low. Minimum allowed is 50% of asking price';
+    }
+
+    if (message.length > 500) {
+      newErrors.message = 'Message cannot exceed 500 characters';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
       return;
     }
 
-    if (amount > animal.price * 1.2) {
-      toast.error('Offer cannot exceed 120% of asking price');
-      return;
-    }
+    const amount = parseFloat(offerAmount);
 
     setIsLoading(true);
 
@@ -62,6 +74,7 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
     setMessage('');
     setStep('form');
     setIsLoading(false);
+    setErrors({});
     onClose();
   };
 
@@ -127,13 +140,24 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
                   <input
                     type="number"
                     value={offerAmount}
-                    onChange={(e) => setOfferAmount(e.target.value)}
+                    onChange={(e) => {
+                      setOfferAmount(e.target.value);
+                      if (errors.amount) setErrors(prev => ({ ...prev, amount: null }));
+                    }}
                     placeholder="Enter your offer"
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg"
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg ${
+                      errors.amount ? 'border-red-300 bg-red-50' : 'border-slate-300'
+                    }`}
                     min="1"
                     max={animal.price * 1.2}
                   />
                 </div>
+                {errors.amount && (
+                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.amount}
+                  </p>
+                )}
                 <p className="text-xs text-slate-500 mt-1">
                   Suggested: KES {Math.round(animal.price * 0.85).toLocaleString()} - KES {Math.round(animal.price * 0.95).toLocaleString()}
                 </p>
@@ -143,14 +167,28 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
               <div className="mb-6">
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Message to Farmer (Optional)
+                  <span className="text-slate-400 font-normal ml-2">
+                    ({message.length}/500)
+                  </span>
                 </label>
                 <textarea
                   value={message}
-                  onChange={(e) => setMessage(e.target.value)}
+                  onChange={(e) => {
+                    setMessage(e.target.value);
+                    if (errors.message) setErrors(prev => ({ ...prev, message: null }));
+                  }}
                   placeholder="Tell the farmer why you're interested..."
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none ${
+                    errors.message ? 'border-red-300 bg-red-50' : 'border-slate-300'
+                  }`}
                   rows={3}
                 />
+                {errors.message && (
+                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.message}
+                  </p>
+                )}
               </div>
 
               {/* Submit Button */}
