@@ -150,7 +150,7 @@ const FarmerAnalytics = () => {
     completed: COLORS.delivered,
   };
 
-  // Calculate metrics from orders/reviews if not set by analytics endpoint
+    // Calculate metrics from orders/reviews if not set by analytics endpoint
   const calculatedMetrics = useMemo(() => {
     if (metrics.totalRevenue !== undefined && Object.keys(metrics).length > 0) {
       return {
@@ -253,7 +253,7 @@ const FarmerAnalytics = () => {
       </div>
     );
   }
-
+  
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
