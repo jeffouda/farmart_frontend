@@ -207,7 +207,13 @@ function Negotiation() {
           </button>
         </form>
       </div>
+ {/* Bottom padding for mobile */}
+      <div className="h-4" />
+    </div>
+  );
+}
 
+export default Negotiation;
 
 
 
