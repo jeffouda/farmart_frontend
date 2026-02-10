@@ -23,4 +23,24 @@ function Negotiation() {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Fetch conversation history
+  const fetchMessages = async () => {
+    try {
+      const response = await api.get(/negotiation/${livestockId});
+      setMessages(response.data.messages || []);
+      setLivestock(response.data.livestock);
+      setReceiverName(response.data.farmer_name || 'Farmer');
+    } catch (error) {
+      console.error('Failed to fetch messages:', error);
+      toast.error('Failed to load conversation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
 
