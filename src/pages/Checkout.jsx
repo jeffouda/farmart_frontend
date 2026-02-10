@@ -117,3 +117,92 @@ const Checkout = () => {
   });
 
   const [errors, setErrors] = useState({});
+
+    const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Invalid email format';
+    }
+
+    const phone = formData.phone.trim();
+    const startsWith07 = /^07\d{8}$/.test(phone);
+    const startsWith01 = /^01\d{8}$/.test(phone);
+    const startsWith254 = /^\+254\d{9}$/.test(phone);
+
+    if (!phone) {
+      newErrors.phone = 'Phone number is required';
+    } else if (!startsWith07 && !startsWith01 && !startsWith254) {
+      newErrors.phone = 'Must start with 07/01 (10 digits) or +254 (13 digits)';
+    }
+
+    if (!formData.county) newErrors.county = 'County is required';
+    if (!formData.town.trim()) newErrors.town = 'Town/Location is required';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!validateForm()) {
+      toast.error('Please fill in all required fields correctly');
+      return;
+    }
+
+    setSubmitting(true);
+    const loadingToastId = toast.loading('Processing your order...');
+
+    try {
+      let orderId;
+
+      if (bargainOrder) {
+        await api.put(`/orders/${bargainOrder.id}`, {
+          status: 'paid',
+          payment_method: formData.paymentMethod
+        });
+        orderId = bargainOrder.id;
+      } else {
+        const response = await api.post('/orders/', {
+          items: items.map(item => ({
+            animal_id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity || 1
+          })),
+          total_amount: grandTotal,
+          payment_method: formData.paymentMethod
+        });
+
+        orderId = response.data.order.id;
+      }
+
+      if (!bargainOrder) {
+        dispatch(clearCart());
+      }
+
+      toast.dismiss(loadingToastId);
+      toast.success('Order placed successfully! 🎉');
+      navigate(`/order-confirmation/${orderId}`);
+    } catch (error) {
+      toast.dismiss(loadingToastId);
+      toast.error(
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        'Failed to place order. Please try again.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
