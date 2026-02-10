@@ -98,3 +98,108 @@ const DetailsModal = ({ order, onClose }) => {
               </p>
             </div>
           </div>
+
+          {/* Special Instructions */}
+          <div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Special Instructions
+            </p>
+            <div className="flex items-start gap-2">
+              <FileText size={16} className="text-slate-400 mt-0.5" />
+              <p className="text-slate-700">
+                {order.special_instructions || buyer.preferred_contact || "None provided"}
+              </p>
+            </div>
+          </div>
+
+          {/* Order Date */}
+          <div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Order Date
+            </p>
+            <p className="text-slate-700">
+              {order.created_at
+                ? new Date(order.created_at).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })
+                : "N/A"}
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-slate-100">
+          <button
+            onClick={onClose}
+            className="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-lg hover:bg-slate-200 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Order Card Component
+const OrderCard = ({ order, onViewDetails, onUpdateStatus }) => {
+  const statusColors = getStatusColors(order.status);
+  const buyer = order.buyer || {};
+  const firstItem = order.items?.[0] || {};
+  const buyerName = buyer.full_name || "Unknown Buyer";
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+      {/* Card Top: Image + Info + Price */}
+      <div className="flex flex-col sm:flex-row">
+        {/* Left: Animal Image */}
+        <div className="w-full sm:w-32 h-32 sm:h-auto flex-shrink-0">
+          <img
+            src={firstItem.image_url || "https://placehold.co/400x400?text=No+Image"}
+            alt={firstItem.name || "Animal"}
+            className="w-full h-full object-cover"
+          />
+        </div>
+
+        {/* Middle: Info */}
+        <div className="flex-1 p-4">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <h3 className="font-bold text-slate-900 text-lg">
+                {firstItem.name || "Livestock"}
+              </h3>
+              <p className="text-sm text-slate-500 flex items-center gap-1">
+                Buyer: <span className="font-medium text-slate-700">{buyerName}</span>
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="font-bold text-green-600 text-lg">
+                KES {parseFloat(order.total_amount || 0).toLocaleString()}
+              </p>
+              <span className={inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusColors.bg} ${statusColors.text}}>
+                {statusColors.label}
+              </span>
+            </div>
+          </div>
+
+          <p className="text-sm text-slate-400">
+            {order.created_at
+              ? new Date(order.created_at).toLocaleDateString()
+              : "N/A"}
+          </p>
+        </div>
+      </div>
+
+      {/* Bottom: Action Bar */}
+      <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex flex-wrap gap-2">
+        {/* View Details */}
+        <button
+          onClick={() => onViewDetails(order)}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+        >
+          <Eye size={16} />
+          View Details
+        </button>
+
