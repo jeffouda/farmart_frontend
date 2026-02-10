@@ -112,3 +112,37 @@ function Marketplace() {
       toast.success('Added to wishlist!');
     }
   };
+
+  // Toggle category checkbox
+  const handleCategoryToggle = (category) => {
+    setSelectedCategories(prev =>
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedCategories([]);
+    setPriceRange({ min: '', max: '' });
+    setSelectedLocation('');
+    setSortBy('newest');
+  };
+
+  // Has active filters
+  const hasActiveFilters = selectedCategories.length > 0 || priceRange.min || priceRange.max || selectedLocation;
+
+  // Skeleton loader
+  const SkeletonCard = () => (
+    <div className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse">
+      <div className="h-48 bg-gray-200" />
+      <div className="p-4">
+        <div className="h-5 bg-gray-200 rounded w-3/4 mb-2" />
+        <div className="h-4 bg-gray-200 rounded w-1/2 mb-3" />
+        <div className="h-6 bg-gray-200 rounded w-1/3 mb-3" />
+        <div className="h-10 bg-gray-200 rounded" />
+      </div>
+    </div>
+  );
