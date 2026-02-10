@@ -74,6 +74,40 @@ function Negotiation() {
       setSending(false);
     }
   };
+  // Format timestamp
+  const formatTime = (isoString) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Check if message is from current user
+  const isMyMessage = (senderId) => {
+    return currentUser && String(senderId) === String(currentUser.id);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading conversation...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex flex-col">
+      {/* Header - WhatsApp Style */}
+      <div className="bg-green-600 text-white px-4 py-3 sticky top-16 z-40 shadow-md">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 hover:bg-green-700 rounded-full transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
 
 
 
