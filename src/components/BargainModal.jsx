@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, MessageCircle, DollarSign, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
@@ -11,6 +11,41 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState('form'); // 'form', 'success', 'error'
   const [errors, setErrors] = useState({});
+  const modalRef = useRef(null);
+  const previousActiveElement = useRef(null);
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        handleClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      previousActiveElement.current = document.activeElement;
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  // Focus trap within modal
+  useEffect(() => {
+    if (isOpen && modalRef.current) {
+      const focusableElements = modalRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      
+      if (focusableElements.length > 0) {
+        focusableElements[0].focus();
+      }
+    }
+  }, [isOpen, step]);
 
   if (!isOpen || !animal) return null;
 
@@ -75,19 +110,33 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
     setStep('form');
     setIsLoading(false);
     setErrors({});
+    // Restore focus to previously active element
+    if (previousActiveElement.current) {
+      previousActiveElement.current.focus();
+    }
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="bargain-modal-title"
+    >
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
         onClick={handleClose}
+        aria-hidden="true"
       />
       
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div 
+        ref={modalRef}
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in duration-200"
+        role="document"
+      >
         {/* Header */}
         <div className="bg-green-600 px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -95,13 +144,14 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
               <MessageCircle className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-white font-semibold">Make an Offer</h3>
+              <h3 id="bargain-modal-title" className="text-white font-semibold">Make an Offer</h3>
               <p className="text-green-100 text-sm">Negotiate the price</p>
             </div>
           </div>
           <button 
             onClick={handleClose}
             className="text-white/80 hover:text-white transition-colors"
+            aria-label="Close modal"
           >
             <X className="w-6 h-6" />
           </button>
@@ -110,14 +160,14 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
         {/* Content */}
         <div className="p-6">
           {step === 'form' ? (
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               {/* Animal Info */}
               <div className="bg-slate-50 rounded-lg p-4 mb-4">
                 <div className="flex items-center gap-3">
                   {animal.image_url && (
                     <img 
                       src={animal.image_url} 
-                      alt={animal.species}
+                      alt={`${animal.species} - ${animal.breed}`}
                       className="w-16 h-16 object-cover rounded-lg"
                     />
                   )}
@@ -132,12 +182,13 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
 
               {/* Offer Amount */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="offerAmount" className="block text-sm font-medium text-slate-700 mb-2">
                   Your Offer (KES)
                 </label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" aria-hidden="true" />
                   <input
+                    id="offerAmount"
                     type="number"
                     value={offerAmount}
                     onChange={(e) => {
@@ -150,28 +201,32 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
                     }`}
                     min="1"
                     max={animal.price * 1.2}
+                    aria-describedby={errors.amount ? "offer-error" : "offer-hint"}
+                    aria-invalid={!!errors.amount}
                   />
                 </div>
-                {errors.amount && (
-                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
+                {errors.amount ? (
+                  <p id="offer-error" className="text-xs text-red-500 mt-1 flex items-center gap-1" role="alert">
+                    <AlertCircle className="w-3 h-3" aria-hidden="true" />
                     {errors.amount}
                   </p>
+                ) : (
+                  <p id="offer-hint" className="text-xs text-slate-500 mt-1">
+                    Suggested: KES {Math.round(animal.price * 0.85).toLocaleString()} - KES {Math.round(animal.price * 0.95).toLocaleString()}
+                  </p>
                 )}
-                <p className="text-xs text-slate-500 mt-1">
-                  Suggested: KES {Math.round(animal.price * 0.85).toLocaleString()} - KES {Math.round(animal.price * 0.95).toLocaleString()}
-                </p>
               </div>
 
               {/* Message */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="message" className="block text-sm font-medium text-slate-700 mb-2">
                   Message to Farmer (Optional)
                   <span className="text-slate-400 font-normal ml-2">
                     ({message.length}/500)
                   </span>
                 </label>
                 <textarea
+                  id="message"
                   value={message}
                   onChange={(e) => {
                     setMessage(e.target.value);
@@ -182,10 +237,12 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
                     errors.message ? 'border-red-300 bg-red-50' : 'border-slate-300'
                   }`}
                   rows={3}
+                  aria-describedby={errors.message ? "message-error" : "message-hint"}
+                  aria-invalid={!!errors.message}
                 />
                 {errors.message && (
-                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
+                  <p id="message-error" className="text-xs text-red-500 mt-1 flex items-center gap-1" role="alert">
+                    <AlertCircle className="w-3 h-3" aria-hidden="true" />
                     {errors.message}
                   </p>
                 )}
@@ -196,15 +253,16 @@ const BargainModal = ({ animal, isOpen, onClose }) => {
                 type="submit"
                 disabled={isLoading || !offerAmount}
                 className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                aria-busy={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Submitting...
+                    <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
+                    <span>Submitting...</span>
                   </>
                 ) : (
                   <>
-                    <MessageCircle className="w-5 h-5" />
+                    <MessageCircle className="w-5 h-5" aria-hidden="true" />
                     Submit Offer
                   </>
                 )}
