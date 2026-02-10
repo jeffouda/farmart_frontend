@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, ArrowLeft, Package, Calendar, CheckCircle, Download, AlertCircle } from 'lucide-react';
+import { ShoppingCart, ArrowLeft, Package, Calendar, CheckCircle, Download, AlertCircle, Flag, Star, PackageCheck } from 'lucide-react';
 import { generateInvoice } from '../utils/generateInvoice';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
+import LeaveReview from './LeaveReview';
+import ConfirmDeliveryModal from './ConfirmDeliveryModal';
 
 const Orders = () => {
   // Redux state - with safety check
   const reduxOrders = useSelector(state => state.orders?.history || []);
   
-  // Check if we're in dashboard context
+  // Check if we're in admin context
   const location = useLocation();
+  const isInAdmin = location.pathname.startsWith('/admin');
   const isInDashboard = location.pathname.startsWith('/dashboard');
   
   // Local state for API-fetched orders
@@ -19,6 +22,14 @@ const Orders = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [useApiData, setUseApiData] = useState(false);
+  
+  // Review modal state
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  
+  // Confirm delivery modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmOrder, setConfirmOrder] = useState(null);
 
   useEffect(() => {
     // Fetch orders from API when component mounts
@@ -26,7 +37,10 @@ const Orders = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await api.get('/orders/');
+        
+        // Use admin endpoint if in admin context
+        const endpoint = isInAdmin ? '/orders/admin/all' : '/orders/';
+        const response = await api.get(endpoint);
         console.log("Orders API Response:", response.data);
         
         // Handle different API response formats
@@ -43,7 +57,7 @@ const Orders = () => {
     };
 
     fetchOrders();
-  }, []);
+  }, [isInAdmin]);
 
   // Use API orders if available, fallback to Redux
   const orders = useApiData ? apiOrders : reduxOrders;
@@ -59,6 +73,34 @@ const Orders = () => {
     } catch {
       return dateString;
     }
+  };
+
+  // Handle review submission
+  const handleReviewSubmit = async (reviewData) => {
+    try {
+      await api.post('/reviews', reviewData);
+      toast.success('Review submitted successfully!');
+      
+      // Update the order to mark it as reviewed
+      setApiOrders(prev => prev.map(order => 
+        order.id === reviewData.orderId 
+          ? { ...order, has_review: true }
+          : order
+      ));
+    } catch (err) {
+      console.error("Failed to submit review:", err);
+      toast.error('Failed to submit review. Please try again.');
+      throw err;
+    }
+  };
+
+  // Handle delivery confirmation
+  const handleDeliveryConfirmed = (orderId) => {
+    setApiOrders(prev => prev.map(order => 
+      order.id === orderId 
+        ? { ...order, status: 'delivered', has_review: false }
+        : order
+    ));
   };
 
   if (loading) {
@@ -112,7 +154,7 @@ const Orders = () => {
   return (
     <div className="py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">My Orders</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{isInAdmin ? 'All Orders' : 'My Orders'}</h1>
         <p className="text-slate-500">{orders.length} order{orders.length !== 1 ? 's' : ''}</p>
       </div>
 
@@ -120,7 +162,10 @@ const Orders = () => {
         {orders.map((order) => (
           <div
             key={order.id}
-            className="bg-white rounded-xl shadow-sm overflow-hidden">
+            className="bg-white rounded-xl shadow-sm overflow-hidden"
+            data-order-status={order.status}
+            data-has-review={order.has_review}
+          >
             {/* Order Header */}
             <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -198,15 +243,90 @@ const Orders = () => {
                     </p>
                   )}
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-slate-500">Total Amount</p>
-                  <p className="text-xl font-bold text-primary">{formatPrice(order.total_amount || order.total)}</p>
+                <div className="flex items-center gap-3">
+                  {/* Confirm Receipt Button */}
+                  <button
+                    onClick={() => {
+                      setConfirmOrder(order);
+                      setShowConfirmModal(true);
+                    }}
+                    disabled={order.status === 'delivered'}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-green-600 border border-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Confirm you received this order"
+                  >
+                    <PackageCheck size={14} />
+                    <span className="hidden sm:inline">Confirm</span>
+                  </button>
+                  
+                  {/* Report Issue Button - Only show for shipped, delivered, or cancelled orders */}
+                  {(order.status?.toLowerCase() && ['shipped', 'delivered', 'cancelled', 'accepted', 'paid'].includes(order.status.toLowerCase())) && (
+                    <Link
+                      to={'/dispute/' + order.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                      title="Report an issue with this order"
+                    >
+                      <Flag size={14} />
+                      <span className="hidden sm:inline">Report Issue</span>
+                    </Link>
+                  )}
+                  
+                  {/* Leave Review Button - Show if order is delivered/completed and no existing review */}
+                  {(order.status?.toLowerCase() === 'delivered' || order.status?.toLowerCase() === 'completed') && !order.has_review && (
+                    <button
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setShowReviewModal(true);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                      title="Leave a review for this order"
+                    >
+                      <Star size={14} className="fill-green-600 text-green-600" />
+                      <span className="hidden sm:inline">Leave Review</span>
+                    </button>
+                  )}
+                  
+                  {/* Already Reviewed Badge */}
+                  {order.has_review === true && (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg">
+                      <CheckCircle size={14} />
+                      <span className="hidden sm:inline">Reviewed</span>
+                    </span>
+                  )}
+                  
+                  <div className="text-right">
+                    <p className="text-sm text-slate-500">Total Amount</p>
+                    <p className="text-xl font-bold text-primary">{formatPrice(order.total_amount || order.total)}</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Review Modal */}
+      {showReviewModal && selectedOrder && (
+        <LeaveReview
+          order={selectedOrder}
+          onClose={() => {
+            setShowReviewModal(false);
+            setSelectedOrder(null);
+          }}
+          onSubmit={handleReviewSubmit}
+        />
+      )}
+
+      {/* Confirm Delivery Modal */}
+      {showConfirmModal && confirmOrder && (
+        <ConfirmDeliveryModal
+          order={confirmOrder}
+          onClose={() => {
+            setShowConfirmModal(false);
+            setConfirmOrder(null);
+          }}
+          onConfirmed={handleDeliveryConfirmed}
+        />
+      )}
     </div>
   );
 };

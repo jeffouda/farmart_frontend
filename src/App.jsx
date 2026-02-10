@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -6,6 +6,9 @@ import { fetchWishlist, clearWishlist } from "./redux/wishlistSlice";
 import { fetchOrders, clearOrders } from "./redux/ordersSlice";
 import { clearCart } from "./redux/cartSlice";
 import { useAuth } from "./context/AuthContext";
+
+// Layouts
+import MainLayout from "./layouts/MainLayout";
 
 // Pages
 import Home from "./pages/Home";
@@ -20,6 +23,7 @@ import Wishlist from "./pages/Wishlist";
 import Unauthorized from "./pages/Unauthorized";
 import NegotiationList from "./pages/NegotiationList";
 import NegotiationRoom from "./pages/NegotiationRoom";
+import RaiseDispute from "./pages/RaiseDispute";
 
 // Buyer Dashboard Components
 import BuyerDashboard from "./pages/BuyerDashboard";
@@ -33,21 +37,25 @@ import FarmerOverview from "./pages/FarmerOverview";
 import FarmerInventory from "./pages/FarmerInventory";
 import FarmerOrders from "./pages/FarmerOrders";
 import FarmerAnalytics from "./pages/FarmerAnalytics";
+import FarmerDisputes from "./pages/FarmerDisputes";
+import FarmerRaiseDispute from "./pages/FarmerRaiseDispute";
 import AddLivestock from "./pages/AddLivestock";
+
+// Admin Dashboard Components
+import AdminLayout from "./pages/AdminLayout";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminUserManagement from "./pages/AdminUserManagement";
+import AdminOrders from "./pages/admin/AdminOrders";
+import AdminDisputes from "./pages/AdminDisputes";
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
+import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 import ScrollToTop from "./components/ScrollToTop";
 
 function App() {
   const dispatch = useDispatch();
   const { currentUser } = useAuth();
-  const location = useLocation();
-
-  // Only show Footer on home page
-  const showFooter = location.pathname === '/';
 
   // Sync Redux state with backend when user logs in
   useEffect(() => {
@@ -66,71 +74,101 @@ function App() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
-      <Navbar />
       <ScrollToTop />
-      <main className="flex-grow">
-        <Routes>
-          {/* --- Public Routes --- */}
+      <Routes>
+        {/* --- Public Routes (with MainLayout) --- */}
+        <Route element={<MainLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/auth" element={<SignUp />} />
+          <Route path="/login" element={<SignUp />} />
           <Route path="/browse" element={<BrowseLivestock />} />
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/livestock/:id" element={<LivestockDetail />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
           <Route path="/checkout/:orderId" element={<Checkout />} />
           <Route path="/orders" element={<Orders />} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
-
-          {/* --- Protected Buyer Routes --- */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute allowedRoles={["buyer"]}>
-                <BuyerDashboard />
-              </ProtectedRoute>
-            }>
-            <Route index element={<BuyerOverview />} />
-            <Route path="orders" element={<Orders />} />
-            <Route path="wishlist" element={<BuyerWishlist />} />
-            <Route path="settings" element={<BuyerSettings />} />
-          </Route>
-
-          {/* Negotiations Routes */}
           <Route path="/negotiations" element={<NegotiationList />} />
           <Route path="/negotiations/:id" element={<NegotiationRoom />} />
+          <Route path="/dispute/:orderId" element={<RaiseDispute />} />
+          <Route path="/dispute/new" element={<RaiseDispute />} />
+        </Route>
 
-          {/* --- Protected Farmer Routes --- */}
-          <Route
-            path="/farmer-dashboard"
-            element={
-              <ProtectedRoute allowedRoles={["farmer"]}>
-                <FarmerDashboard />
-              </ProtectedRoute>
-            }>
-            {/* These sub-routes align with the Sidebar icons */}
-            <Route index element={<FarmerOverview />} />
-            <Route path="inventory" element={<FarmerInventory />} />
-            <Route path="orders" element={<FarmerOrders />} />
-            <Route path="analytics" element={<FarmerAnalytics />} />
-            <Route path="add" element={<AddLivestock />} />
-          </Route>
+        {/*Protected Buyer Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["buyer"]}>
+              <BuyerDashboard />
+            </ProtectedRoute>
+          }>
+          <Route index element={<BuyerOverview />} />
+          <Route path="orders" element={<Orders />} />
+          <Route path="wishlist" element={<BuyerWishlist />} />
+          <Route path="settings" element={<BuyerSettings />} />
+        </Route>
 
-          {/* Fallback 404 */}
-          <Route
-            path="*"
-            element={
-              <div className="flex flex-col items-center justify-center pt-20">
-                <h1 className="text-2xl font-bold">404 - Page Not Found</h1>
-                <a href="/" className="text-green-600 hover:underline mt-2">
-                  Return Home
-                </a>
-              </div>
-            }
-          />
-        </Routes>
-      </main>
-      {showFooter && <Footer />}
+        {/* Protected Farmer Routes */}
+        <Route
+          path="/farmer-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["farmer"]}>
+              <FarmerDashboard />
+            </ProtectedRoute>
+          }>
+          <Route index element={<FarmerOverview />} />
+          <Route path="inventory" element={<FarmerInventory />} />
+          <Route path="orders" element={<FarmerOrders />} />
+          <Route path="analytics" element={<FarmerAnalytics />} />
+          <Route path="disputes" element={<FarmerDisputes />} />
+          <Route path="disputes/new" element={<FarmerRaiseDispute />} />
+          <Route path="add" element={<AddLivestock />} />
+        </Route>
+
+        {/* Farmer Report Buyer Route */}
+        <Route
+          path="/farmer/report-buyer/:orderId"
+          element={
+            <ProtectedRoute allowedRoles={["farmer"]}>
+              <FarmerRaiseDispute />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin Routes - Protected by ProtectedAdminRoute */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedAdminRoute>
+              <AdminLayout />
+            </ProtectedAdminRoute>
+          }>
+          <Route index element={<AdminDashboard />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUserManagement />} />
+          <Route path="farmers" element={<AdminUserManagement />} />
+          <Route path="buyers" element={<AdminUserManagement />} />
+          <Route path="orders" element={<AdminOrders />} />
+          <Route path="disputes" element={<AdminDisputes />} />
+          <Route path="finance" element={<AdminDashboard />} />
+          <Route path="settings" element={<AdminDashboard />} />
+        </Route>
+
+        {/* Fallback 404 */}
+        <Route
+          path="*"
+          element={
+            <div className="flex flex-col items-center justify-center pt-20">
+              <h1 className="text-2xl font-bold">404 - Page Not Found</h1>
+              <a href="/" className="text-green-600 hover:underline mt-2">
+                Return Home
+              </a>
+            </div>
+          }
+        />
+      </Routes>
       <Toaster position="top-right" />
     </div>
   );
