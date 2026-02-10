@@ -1,13 +1,25 @@
 import React, { useState } from 'react';
-import { Star, X, CheckCircle } from 'lucide-react';
+import { Star, X, CheckCircle, ThumbsUp } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 const LeaveReview = ({ order, onClose, onSubmit }) => {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [feedback, setFeedback] = useState('');
+  const [selectedTags, setSelectedTags] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  const QUICK_TAGS = [
+    'Fresh',
+    'Good Packaging',
+    'On Time',
+    'Value for Money',
+    'Healthy Livestock',
+    'Quality Product',
+    'Friendly Service',
+    'Would Recommend',
+  ];
 
   const getRatingLabel = (rate) => {
     const labels = {
@@ -19,6 +31,14 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
       5: 'Excellent'
     };
     return labels[rate] || 'Tap to rate';
+  };
+
+  const handleTagToggle = (tag) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
   };
 
   const handleSubmit = async () => {
@@ -42,6 +62,7 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
         orderId: order.id,
         rating,
         feedback,
+        tags: selectedTags,
       });
 
       setSubmitted(true);
@@ -130,6 +151,28 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
             </p>
           </div>
 
+          {/* Quick Tags */}
+          <div>
+            <p className="text-sm font-semibold text-gray-700 mb-3">What went well?</p>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_TAGS.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => handleTagToggle(tag)}
+                  disabled={submitting}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    selectedTags.includes(tag)
+                      ? 'bg-green-100 text-green-700 border border-green-200'
+                      : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                  } disabled:opacity-50`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Feedback Text */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -161,9 +204,19 @@ const LeaveReview = ({ order, onClose, onSubmit }) => {
           <button
             onClick={handleSubmit}
             disabled={submitting || rating === 0 || feedback.length < 10}
-            className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {submitting ? 'Submitting...' : 'Submit Review'}
+            {submitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <ThumbsUp className="w-4 h-4" />
+                Submit Review
+              </>
+            )}
           </button>
         </div>
       </div>
