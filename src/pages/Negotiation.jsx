@@ -193,6 +193,22 @@ function Negotiation() {
             placeholder="Type a message..."
             className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white transition-all"
           />
+                    {/* Send Button */}
+          <button
+            type="submit"
+            disabled={!newMessage.trim() || sending}
+            className={`p-2.5 rounded-full transition-colors ${
+              newMessage.trim() && !sending
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            <Send size={18} />
+          </button>
+        </form>
+      </div>
+
+
 
 
 
