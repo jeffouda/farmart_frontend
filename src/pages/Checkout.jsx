@@ -157,30 +157,42 @@ const Checkout = () => {
 
   const pollPaymentStatus = async (id, toastId) => {
     let attempts = 0;
-    const maxAttempts = 15;
+    const maxAttempts = 30; // Increased for longer checkout process
 
     const interval = setInterval(async () => {
       try {
         attempts++;
-        const response = await api.get(`/orders/${id}/status`);
-        const status = response.data.status;
+        const response = await api.get(`/orders/poll-status/${id}`);
+        const data = response.data;
 
-        if (status === "paid" || status === "delivered") {
+        if (data.status === "completed") {
           clearInterval(interval);
-          toast.success("Payment confirmed!", { id: toastId });
+          toast.success("Payment confirmed! Order created.", { id: toastId });
           if (!bargainOrder) dispatch(clearCart());
-          navigate(`/order-confirmation/${id}`);
-        } else if (status === "failed" || attempts >= maxAttempts) {
+          // Navigate to order confirmation with the actual order_id
+          navigate(`/order-confirmation/${data.order_id || id}`);
+        } else if (data.status === "failed" || attempts >= maxAttempts) {
           clearInterval(interval);
           setIsWaitingForMpesa(false);
           setSubmitting(false);
           toast.error(
-            status === "failed" ? "Payment failed." : "Request timed out.",
+            data.status === "failed"
+              ? "Payment failed or was cancelled."
+              : "Request timed out. Check your orders page for status.",
             { id: toastId },
           );
         }
+        // If status is "pending" or "processing", continue polling
       } catch (err) {
         console.error("Polling error", err);
+        if (attempts >= maxAttempts) {
+          clearInterval(interval);
+          setIsWaitingForMpesa(false);
+          setSubmitting(false);
+          toast.error("Request timed out. Please check your orders page.", {
+            id: toastId,
+          });
+        }
       }
     }, 5000);
   };
@@ -210,7 +222,18 @@ const Checkout = () => {
         currentOrderId = bargainOrder.id;
       } else {
         const response = await api.post("/orders/", orderPayload);
-        currentOrderId = response.data.order_id || response.data.order?.id;
+        // Handle both response formats: {order_id: ...} or {order: {id: ...}}
+        currentOrderId =
+          response.data.order_id || response.data.order?.id || response.data.id;
+
+        // Fallback: If still no order_id, try to parse from mpesa_response
+        if (!currentOrderId && response.data.mpesa_response) {
+          console.warn("Order created but order_id not in expected format");
+        }
+      }
+
+      if (!currentOrderId) {
+        throw new Error("Failed to get order ID from server response");
       }
 
       if (formData.paymentMethod === "mpesa") {
