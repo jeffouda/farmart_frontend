@@ -63,5 +63,11 @@ const NegotiationList = () => {
       case 'counter': return <AlertCircle className="w-4 h-4" />;
       default: return <MessageCircle className="w-4 h-4" />;
     }
+ const getOtherPartyName = (session) => {
+    if (currentUser?.role === 'buyer') {
+      return session.animal?.farmer_name || 'Farmer';
+    } else {
+      return session.buyer?.full_name || 'Buyer';
+    }
   };
 
