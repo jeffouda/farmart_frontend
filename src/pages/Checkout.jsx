@@ -70,3 +70,50 @@ const Checkout = () => {
       navigate('/marketplace');
     }
   }, [cartItems, orderId, loadingOrder, navigate]);
+
+    if (loadingOrder) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-green-600 animate-spin mx-auto mb-4" />
+          <p className="text-slate-600 font-medium">Loading order details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">
+            {bargainOrder ? 'No items in order' : 'Your cart is empty'}
+          </h2>
+          <p className="text-slate-500 mb-6">
+            {bargainOrder
+              ? 'The order has no items.'
+              : 'Add some livestock to your cart before checking out.'}
+          </p>
+          <Link
+            to={bargainOrder ? '/dashboard/orders' : '/marketplace'}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
+            <ArrowLeft size={20} />
+            {bargainOrder ? 'Back to Orders' : 'Browse Marketplace'}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    county: '',
+    town: '',
+    instructions: '',
+    paymentMethod: 'mpesa'
+  });
+
+  const [errors, setErrors] = useState({});
