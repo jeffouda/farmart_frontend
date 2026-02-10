@@ -13,16 +13,17 @@ function Negotiation() {
   const pollingRef = useRef(null);
 
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [livestock, setLivestock] = useState(null);
-  const [receiverName, setReceiverName] = useState('Loading...');
+  const [receiverName, setReceiverName] = useState("Loading...");
 
   // Scroll to bottom when messages change
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -30,18 +31,19 @@ function Negotiation() {
   // Fetch conversation history
   const fetchMessages = async () => {
     try {
-      const response = await api.get(/negotiation/${livestockId});
+      const response = await api.get(`/negotiation/${livestockId}`);
       setMessages(response.data.messages || []);
       setLivestock(response.data.livestock);
-      setReceiverName(response.data.farmer_name || 'Farmer');
+      setReceiverName(response.data.farmer_name || "Farmer");
     } catch (error) {
-      console.error('Failed to fetch messages:', error);
-      toast.error('Failed to load conversation');
+      console.error("Failed to fetch messages:", error);
+      toast.error("Failed to load conversation");
     } finally {
       setLoading(false);
     }
   };
-   // Initial fetch and polling
+
+  // Initial fetch and polling
   useEffect(() => {
     fetchMessages();
 
@@ -54,31 +56,33 @@ function Negotiation() {
       }
     };
   }, [livestockId]);
- // Send message
+
+  // Send message
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
     setSending(true);
     try {
-      await api.post(/negotiation/${livestockId}, {
+      await api.post(`/negotiation/${livestockId}`, {
         content: newMessage.trim(),
         receiver_id: receiverId,
       });
-      setNewMessage('');
+      setNewMessage("");
       fetchMessages();
     } catch (error) {
-      console.error('Failed to send message:', error);
-      toast.error('Failed to send message');
+      console.error("Failed to send message:", error);
+      toast.error("Failed to send message");
     } finally {
       setSending(false);
     }
   };
+
   // Format timestamp
   const formatTime = (isoString) => {
-    if (!isoString) return '';
+    if (!isoString) return "";
     const date = new Date(isoString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   // Check if message is from current user
@@ -109,11 +113,14 @@ function Negotiation() {
             <ArrowLeft size={20} />
           </button>
 
-                    {/* Livestock Thumbnail */}
+          {/* Livestock Thumbnail */}
           <div className="w-10 h-10 rounded-lg overflow-hidden bg-white">
             <img
-              src={livestock?.image_url || 'https://placehold.co/100x100?text=Animal'}
-              alt={livestock?.species || 'Livestock'}
+              src={
+                livestock?.image_url ||
+                "https://placehold.co/100x100?text=Animal"
+              }
+              alt={livestock?.species || "Livestock"}
               className="w-full h-full object-cover"
             />
           </div>
@@ -121,13 +128,14 @@ function Negotiation() {
           {/* Name and Price */}
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold truncate">
-              {livestock?.breed || ${livestock?.species} - ${receiverName}}
+              {livestock?.breed || `${livestock?.species} - ${receiverName}`}
             </h3>
             <p className="text-xs text-green-100">
-              Asking: KES {livestock?.price?.toLocaleString() || '0'}
+              Asking: KES {livestock?.price?.toLocaleString() || "0"}
             </p>
           </div>
- {/* Action Buttons */}
+
+          {/* Action Buttons */}
           <div className="flex items-center gap-2">
             <button className="p-2 hover:bg-green-700 rounded-full transition-colors">
               <Phone size={20} />
@@ -138,11 +146,14 @@ function Negotiation() {
           </div>
         </div>
       </div>
-       {/* Chat Area */}
+
+      {/* Chat Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-slate-500">No messages yet. Start the conversation!</p>
+            <p className="text-slate-500">
+              No messages yet. Start the conversation!
+            </p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -150,19 +161,19 @@ function Negotiation() {
             return (
               <div
                 key={msg.id}
-                className={flex ${isMe ? 'justify-end' : 'justify-start'}}
+                className={`flex ${isMe ? "justify-end" : "justify-start"}`}
               >
                 <div
                   className={`max-w-[75%] rounded-2xl px-4 py-2 shadow-sm ${
                     isMe
-                      ? 'bg-green-500 text-white rounded-br-md'
-                      : 'bg-white text-slate-900 rounded-bl-md'
+                      ? "bg-green-500 text-white rounded-br-md"
+                      : "bg-white text-slate-900 rounded-bl-md"
                   }`}
                 >
                   <p className="text-sm leading-relaxed">{msg.content}</p>
                   <p
                     className={`text-[10px] mt-1 ${
-                      isMe ? 'text-green-100' : 'text-slate-400'
+                      isMe ? "text-green-100" : "text-slate-400"
                     }`}
                   >
                     {formatTime(msg.created_at)}
@@ -174,7 +185,8 @@ function Negotiation() {
         )}
         <div ref={messagesEndRef} />
       </div>
-       {/* Input Area */}
+
+      {/* Input Area */}
       <div className="bg-white border-t border-gray-200 px-4 py-3">
         <form onSubmit={handleSendMessage} className="flex items-center gap-3">
           {/* Attachment Button */}
@@ -193,29 +205,26 @@ function Negotiation() {
             placeholder="Type a message..."
             className="flex-1 px-4 py-2.5 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white transition-all"
           />
-                    {/* Send Button */}
+
+          {/* Send Button */}
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
             className={`p-2.5 rounded-full transition-colors ${
               newMessage.trim() && !sending
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                ? "bg-green-600 text-white hover:bg-green-700"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >
             <Send size={18} />
           </button>
         </form>
       </div>
- {/* Bottom padding for mobile */}
+
+      {/* Bottom padding for mobile */}
       <div className="h-4" />
     </div>
   );
 }
 
 export default Negotiation;
-
-
-
-
-
