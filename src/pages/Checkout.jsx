@@ -206,3 +206,20 @@ const Checkout = () => {
       setSubmitting(false);
     }
   };
+
+    return (
+    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <form onSubmit={(e) => { e.preventDefault(); handlePlaceOrder(); }}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* LEFT COLUMN FORM */}
+            {/* RIGHT COLUMN ORDER SUMMARY */}
+            {/* SUBMIT BUTTON */}
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default Checkout;
