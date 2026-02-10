@@ -325,3 +325,197 @@ const UserTableRow = ({ user, type, onAction }) => (
     </td>
   </tr>
 );
+
+const AdminUserManagement = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Sync active tab with URL path
+  const getActiveTabFromPath = () => {
+    if (location.pathname.includes("/buyers")) return "buyers";
+    return "farmers";
+  };
+  
+  const [activeTab, setActiveTab] = useState(getActiveTabFromPath);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [selectedUser, setSelectedUser] = useState(null);
+  
+  // Update tab when URL changes
+  useEffect(() => {
+    setActiveTab(getActiveTabFromPath());
+  }, [location.pathname]);
+  
+  // Handle tab click - navigate to appropriate URL
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+    navigate(tab === "buyers" ? "/admin/buyers" : "/admin/farmers");
+  };
+
+  // Filter users based on search and status
+  const filteredFarmers = mockFarmers.filter((farmer) => {
+    const matchesSearch =
+      farmer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      farmer.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = filterStatus === "all" || farmer.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredBuyers = mockBuyers.filter((buyer) => {
+    const matchesSearch =
+      buyer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      buyer.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = filterStatus === "all" || buyer.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Handle actions
+  const handleAction = (action, user) => {
+    switch (action) {
+      case "verify":
+        toast.success(`${user.name} has been verified successfully!`);
+        break;
+      case "suspend":
+        toast.success(`${user.name} has been ${user.status === "pending" ? "rejected" : "suspended"}`);
+        break;
+      case "view":
+        setSelectedUser(user);
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Count pending farmers
+  const pendingCount = mockFarmers.filter((f) => f.status === "pending").length;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">User Management</h1>
+          <p className="text-slate-400 text-sm mt-1">
+            Manage farmers and buyers on the platform
+          </p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-slate-800 p-1 rounded-lg w-fit">
+        <button
+          onClick={() => handleTabClick("farmers")}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+            activeTab === "farmers"
+              ? "bg-blue-600 text-white"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          Farmers
+          {pendingCount > 0 && (
+            <span className="bg-amber-500 text-black text-xs px-1.5 py-0.5 rounded-full">
+              {pendingCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => handleTabClick("buyers")}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "buyers"
+              ? "bg-blue-600 text-white"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          Buyers
+        </button>
+      </div>
+
+      {/* Search & Filter */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+          <input
+            type="text"
+            placeholder="Search by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div className="relative">
+          <Filter
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-8 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+          >
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-slate-700/50">
+                <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
+                  {activeTab === "farmers" ? "Farmer" : "Buyer"}
+                </th>
+                <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
+                  Location
+                </th>
+                <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
+                  Status
+                </th>
+                <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
+                  {activeTab === "farmers" ? "Rating" : "Orders"}
+                </th>
+                <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
+                  Join Date
+                </th>
+                <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {(activeTab === "farmers" ? filteredFarmers : filteredBuyers).map(
+                (user) => (
+                  <UserTableRow
+                    key={user.id}
+                    user={user}
+                    type={activeTab === "farmers" ? "farmer" : "buyer"}
+                    onAction={handleAction}
+                  />
+                )
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Empty State */}
+        {(filteredFarmers.length === 0 || filteredBuyers.length === 0) && (
+          <div className="text-center py-12">
+            <p className="text-slate-400">No users found matching your criteria</p>
+          </div>
+        )}
+      </div>
+
+      {/* User Details Modal */}
+      <UserDetailsModal user={selectedUser} onClose={() => setSelectedUser(null)} />
+    </div>
+  );
+};
+
+export default AdminUserManagement;
