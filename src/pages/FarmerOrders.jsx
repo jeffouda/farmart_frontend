@@ -1,30 +1,40 @@
 import React, { useState, useEffect } from "react";
 import {
-  Package,
-  Truck,
-  History,
-  Eye,
-  Phone,
-  MapPin,
-  FileText,
   CheckCircle,
+  Clock,
+  Package,
+  MessageSquare,
   XCircle,
-  ChevronRight,
+  Truck,
+  DollarSign,
 } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
-// Status badge colors
-const getStatusColors = (status) => {
+const OrderStatusCard = ({ label, count, icon: Icon, active }) => (
+  <div
+    className={`flex items-center gap-3 p-3 bg-white border ${active ? "border-green-500 shadow-sm" : "border-slate-100"} rounded-lg cursor-pointer transition-all hover:shadow-md`}>
+    <div
+      className={`${active ? "bg-green-100 text-green-600" : "bg-slate-50 text-slate-400"} p-2 rounded-md`}>
+      <Icon size={18} />
+    </div>
+    <div>
+      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+        {label}
+      </p>
+      <p className="text-sm font-bold text-slate-900">{count}</p>
+    </div>
+  </div>
+);
+
+const getStatusColor = (status) => {
   switch (status) {
     case "pending":
       return { bg: "bg-amber-100", text: "text-amber-700", label: "Pending" };
-    case "processing":
-      return { bg: "bg-blue-100", text: "text-blue-700", label: "Processing" };
+    case "paid":
+      return { bg: "bg-blue-100", text: "text-blue-700", label: "Paid" };
     case "shipped":
       return { bg: "bg-purple-100", text: "text-purple-700", label: "Shipped" };
-    case "in_transit":
-      return { bg: "bg-indigo-100", text: "text-indigo-700", label: "In Transit" };
     case "delivered":
       return { bg: "bg-green-100", text: "text-green-700", label: "Delivered" };
     case "cancelled":
@@ -34,242 +44,310 @@ const getStatusColors = (status) => {
   }
 };
 
-// Details Modal Component
-const DetailsModal = ({ order, onClose }) => {
-  if (!order) return null;
+const getStepStatus = (currentStatus, stepName) => {
+  const order = ["pending", "paid", "shipped", "delivered"];
+  const currentIndex = order.indexOf(currentStatus);
+  const stepIndex = order.indexOf(stepName);
 
-  const buyer = order.buyer || {};
-  const firstItem = order.items?.[0] || {};
+  if (stepIndex < currentIndex) return "completed";
+  if (stepIndex === currentIndex) return "active";
+  return "locked";
+};
+
+const OrderCard = ({ order, onViewDetails }) => {
+  const statusColors = getStatusColor(order.status);
+  const buyerName = order.buyer?.full_name || "Unknown Buyer";
+  const initials = buyerName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  // Get animal info from items
+  const items = order.items || [];
+  const firstItem = items[0] || {};
+  const animalName = firstItem.name || "Livestock";
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="p-6 border-b border-slate-100">
-          <h3 className="text-lg font-bold text-slate-900">Order Details</h3>
-          <p className="text-sm text-slate-500">Order #{order.id?.slice(0, 8)}</p>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+      {/* Left: Animal Card */}
+      <div className="lg:col-span-1 bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100">
+        <div className="relative">
+          <img
+            src={
+              firstItem.image_url ||
+              "https://placehold.co/600x400?text=No+Image"
+            }
+            alt={animalName}
+            className="w-full h-64 object-cover"
+          />
+          <div
+            className={`absolute bottom-4 left-4 ${statusColors.bg} ${statusColors.text} text-xs px-3 py-1 rounded-full flex items-center gap-1 backdrop-blur-sm`}>
+            <CheckCircle size={14} /> {statusColors.label}
+          </div>
         </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-4">
-          {/* Animal Info */}
-          <div className="flex gap-4">
-            <img
-              src={firstItem.image_url || "https://placehold.co/100x100?text=No+Image"}
-              alt={firstItem.name || "Animal"}
-              className="w-20 h-20 rounded-lg object-cover"
-            />
+        <div className="p-5">
+          <div className="flex justify-between items-start mb-2">
+            <h3 className="text-lg font-bold text-slate-900">{animalName}</h3>
+            <p className="text-green-700 font-bold text-lg">
+              KSh {parseFloat(order.total_amount || 0).toLocaleString()}
+            </p>
+          </div>
+          <p className="text-slate-500 text-sm flex items-center gap-2 mb-4">
+            <span
+              className={`w-2 h-2 rounded-full ${order.status === "delivered" ? "bg-green-500" : "bg-amber-500"}`}></span>
+            {statusColors.label}
+          </p>
+          <div className="flex items-center gap-2 pt-4 border-t border-slate-50">
+            <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-700">
+              {initials}
+            </div>
             <div>
-              <p className="font-bold text-slate-900">{firstItem.name || "Livestock"}</p>
-              <p className="text-sm text-slate-500">{firstItem.species || "Unknown"}</p>
-              <p className="text-green-600 font-bold mt-1">
-                KES {parseFloat(order.total_amount || 0).toLocaleString()}
-              </p>
+              <p className="text-xs font-bold text-slate-900">{buyerName}</p>
+              <p className="text-[10px] text-slate-500">Buyer</p>
             </div>
           </div>
-
-          <hr className="border-slate-100" />
-
-          {/* Buyer Contact */}
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Buyer Contact
+          <div className="mt-4 pt-4 border-t border-slate-50">
+            <p className="text-xs text-slate-400">
+              Order ID: {order.id?.slice(0, 8)}...
             </p>
-            <div className="flex items-center gap-2">
-              <Phone size={16} className="text-slate-400" />
-              <a
-                href={tel:${buyer.phone_number || ""}}
-                className="text-slate-700 hover:text-green-600 transition-colors"
-              >
-                {buyer.phone_number || "N/A"}
-              </a>
-            </div>
-          </div>
-
-          {/* Delivery Address */}
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Delivery Address
-            </p>
-            <div className="flex items-start gap-2">
-              <MapPin size={16} className="text-slate-400 mt-0.5" />
-              <p className="text-slate-700">
-                {order.delivery_address || buyer.delivery_address || "N/A"}
-              </p>
-            </div>
-          </div>
-
-          {/* Special Instructions */}
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Special Instructions
-            </p>
-            <div className="flex items-start gap-2">
-              <FileText size={16} className="text-slate-400 mt-0.5" />
-              <p className="text-slate-700">
-                {order.special_instructions || buyer.preferred_contact || "None provided"}
-              </p>
-            </div>
-          </div>
-
-          {/* Order Date */}
-          <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Order Date
-            </p>
-            <p className="text-slate-700">
+            <p className="text-xs text-slate-400">
+              Created:{" "}
               {order.created_at
-                ? new Date(order.created_at).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })
+                ? new Date(order.created_at).toLocaleDateString()
                 : "N/A"}
             </p>
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="p-6 border-t border-slate-100">
-          <button
-            onClick={onClose}
-            className="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-lg hover:bg-slate-200 transition-colors"
-          >
-            Close
-          </button>
-        </div>
       </div>
-    </div>
-  );
-};
 
-// Order Card Component
-const OrderCard = ({ order, onViewDetails, onUpdateStatus }) => {
-  const statusColors = getStatusColors(order.status);
-  const buyer = order.buyer || {};
-  const firstItem = order.items?.[0] || {};
-  const buyerName = buyer.full_name || "Unknown Buyer";
+      {/* Right: Progress Tracker */}
+      <div className="lg:col-span-2 bg-[#eef7ff] border-2 border-blue-400 rounded-2xl p-8">
+        <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight mb-1">
+          Order Progress
+        </h3>
+        <p className="text-slate-600 mb-8">
+          Track what's happening with this order.
+        </p>
 
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
-      {/* Card Top: Image + Info + Price */}
-      <div className="flex flex-col sm:flex-row">
-        {/* Left: Animal Image */}
-        <div className="w-full sm:w-32 h-32 sm:h-auto flex-shrink-0">
-          <img
-            src={firstItem.image_url || "https://placehold.co/400x400?text=No+Image"}
-            alt={firstItem.name || "Animal"}
-            className="w-full h-full object-cover"
-          />
-        </div>
-
-        {/* Middle: Info */}
-        <div className="flex-1 p-4">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <h3 className="font-bold text-slate-900 text-lg">
-                {firstItem.name || "Livestock"}
-              </h3>
-              <p className="text-sm text-slate-500 flex items-center gap-1">
-                Buyer: <span className="font-medium text-slate-700">{buyerName}</span>
-              </p>
+        <div className="space-y-8">
+          {/* Step 1: Pending */}
+          <div
+            className={`relative pl-8 border-l-2 ${
+              getStepStatus(order.status, "pending") === "completed"
+                ? "border-green-500"
+                : getStepStatus(order.status, "pending") === "active"
+                  ? "border-green-500"
+                  : "border-slate-300"
+            }`}>
+            <div
+              className={`absolute -left-[11px] top-0 w-5 h-5 rounded-full flex items-center justify-center ${
+                getStepStatus(order.status, "pending") === "completed"
+                  ? "bg-green-500 text-white"
+                  : getStepStatus(order.status, "pending") === "active"
+                    ? "bg-green-500 text-white"
+                    : "bg-slate-100 border-2 border-slate-300 text-slate-400"
+              }`}>
+              {getStepStatus(order.status, "pending") === "completed" ? (
+                <CheckCircle size={12} />
+              ) : (
+                <Clock size={12} />
+              )}
             </div>
-            <div className="text-right">
-              <p className="font-bold text-green-600 text-lg">
-                KES {parseFloat(order.total_amount || 0).toLocaleString()}
+            <div className="flex justify-between items-start mb-2">
+              <h4
+                className={`font-bold text-lg ${
+                  getStepStatus(order.status, "pending") === "locked"
+                    ? "text-slate-400"
+                    : "text-slate-800"
+                }`}>
+                Order Placed
+              </h4>
+              {getStepStatus(order.status, "pending") === "active" && (
+                <span className="bg-[#4a8a5e] text-white text-xs px-4 py-1 rounded-md font-bold uppercase">
+                  Current Step
+                </span>
+              )}
+            </div>
+            <div className="bg-white/50 p-4 rounded-lg border border-slate-200">
+              <p className="font-bold text-slate-800 text-sm">
+                {order.status === "pending"
+                  ? "Awaiting confirmation"
+                  : "Order confirmed"}
               </p>
-              <span className={inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusColors.bg} ${statusColors.text}}>
-                {statusColors.label}
-              </span>
+              <p className="text-slate-600 text-xs mt-1">
+                {order.status === "pending"
+                  ? "Waiting for your approval"
+                  : "Order has been confirmed"}
+              </p>
             </div>
           </div>
 
-          <p className="text-sm text-slate-400">
-            {order.created_at
-              ? new Date(order.created_at).toLocaleDateString()
-              : "N/A"}
-          </p>
+          {/* Step 2: Paid */}
+          <div
+            className={`relative pl-8 border-l-2 ${
+              getStepStatus(order.status, "paid") === "completed"
+                ? "border-green-500"
+                : getStepStatus(order.status, "paid") === "active"
+                  ? "border-green-500"
+                  : "border-slate-300"
+            }`}>
+            <div
+              className={`absolute -left-[11px] top-0 w-5 h-5 rounded-full flex items-center justify-center ${
+                getStepStatus(order.status, "paid") === "completed"
+                  ? "bg-green-500 text-white"
+                  : getStepStatus(order.status, "paid") === "active"
+                    ? "bg-green-500 text-white"
+                    : "bg-slate-100 border-2 border-slate-300 text-slate-400"
+              }`}>
+              {getStepStatus(order.status, "paid") === "completed" ? (
+                <CheckCircle size={12} />
+              ) : (
+                <DollarSign size={12} />
+              )}
+            </div>
+            <h4
+              className={`font-bold text-lg ${
+                getStepStatus(order.status, "paid") === "locked"
+                  ? "text-slate-400"
+                  : "text-slate-800"
+              }`}>
+              Payment Received
+            </h4>
+          </div>
+
+          {/* Step 3: Shipped */}
+          <div
+            className={`relative pl-8 border-l-2 ${
+              getStepStatus(order.status, "shipped") === "completed"
+                ? "border-green-500"
+                : getStepStatus(order.status, "shipped") === "active"
+                  ? "border-green-500"
+                  : "border-slate-300"
+            }`}>
+            <div
+              className={`absolute -left-[11px] top-0 w-5 h-5 rounded-full flex items-center justify-center ${
+                getStepStatus(order.status, "shipped") === "completed"
+                  ? "bg-green-500 text-white"
+                  : getStepStatus(order.status, "shipped") === "active"
+                    ? "bg-green-500 text-white"
+                    : "bg-slate-100 border-2 border-slate-300 text-slate-400"
+              }`}>
+              {getStepStatus(order.status, "shipped") === "completed" ? (
+                <CheckCircle size={12} />
+              ) : (
+                <Truck size={12} />
+              )}
+            </div>
+            <h4
+              className={`font-bold text-lg ${
+                getStepStatus(order.status, "shipped") === "locked"
+                  ? "text-slate-400"
+                  : "text-slate-800"
+              }`}>
+              Shipped / Ready for Pickup
+            </h4>
+          </div>
+
+          {/* Step 4: Delivered */}
+          <div
+            className={`relative pl-8 border-l-2 ${
+              getStepStatus(order.status, "delivered") === "completed"
+                ? "border-green-500"
+                : "border-slate-300"
+            }`}>
+            <div
+              className={`absolute -left-[11px] top-0 w-5 h-5 rounded-full flex items-center justify-center ${
+                getStepStatus(order.status, "delivered") === "completed"
+                  ? "bg-green-500 text-white"
+                  : "bg-slate-100 border-2 border-slate-300 text-slate-400"
+              }`}>
+              <Package size={12} />
+            </div>
+            <h4
+              className={`font-bold text-lg ${
+                getStepStatus(order.status, "delivered") === "locked"
+                  ? "text-slate-400"
+                  : "text-slate-800"
+              }`}>
+              Delivered
+            </h4>
+          </div>
         </div>
-      </div>
 
-      {/* Bottom: Action Bar */}
-      <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex flex-wrap gap-2">
-        {/* View Details */}
-        <button
-          onClick={() => onViewDetails(order)}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-        >
-          <Eye size={16} />
-          View Details
-        </button>
-
-        {/* Mark as Shipped (only if pending/processing) */}
-        {(order.status === "pending" || order.status === "processing") && (
-          <button
-            onClick={() => onUpdateStatus(order.id, "shipped")}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-          >
-            <Truck size={16} />
-            Mark as Shipped
-          </button>
-        )}
-
-        {/* Mark Delivered (only if in_transit) */}
-        {order.status === "in_transit" && (
-          <button
-            onClick={() => onUpdateStatus(order.id, "delivered")}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-          >
-            <CheckCircle size={16} />
-            Mark Delivered
-          </button>
-        )}
+        <div className="mt-12 pt-8 border-t border-blue-200">
+          <h4 className="font-bold text-slate-900 text-lg mb-2">
+            Quick Actions
+          </h4>
+          <div className="flex gap-4 mt-6">
+            <button className="flex items-center gap-2 bg-blue-500 text-white px-6 py-2 rounded-lg text-xs font-bold hover:bg-blue-600 transition-colors">
+              <MessageSquare size={14} /> Message Buyer
+            </button>
+            {order.status === "pending" && (
+              <button
+                onClick={() => handleApproveOrder(order.id)}
+                className="flex items-center gap-2 bg-green-500 text-white px-6 py-2 rounded-lg text-xs font-bold hover:bg-green-600 transition-colors">
+                <CheckCircle size={14} /> Approve Order
+              </button>
+            )}
+            {order.status !== "delivered" && order.status !== "cancelled" && (
+              <button className="flex items-center gap-2 bg-red-50 text-red-500 px-6 py-2 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors">
+                <XCircle size={14} /> Cancel Order
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-// Tab Component
-const TabButton = ({ label, icon: Icon, active, onClick, count }) => (
-  <button
-    onClick={onClick}
-    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-      active
-        ? "bg-green-600 text-white"
-        : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-    }`}
-  >
-    <Icon size={18} />
-    {label}
-    {count > 0 && (
-      <span className={ml-1 px-2 py-0.5 rounded-full text-xs ${active ? "bg-green-500" : "bg-slate-100"}}>
-        {count}
-      </span>
-    )}
-  </button>
-);
+const handleApproveOrder = async (orderId) => {
+  try {
+    await api.put(`/orders/${orderId}`, { status: "paid" });
+    toast.success("Order approved successfully");
+    window.location.reload();
+  } catch (error) {
+    console.error("Failed to approve order:", error);
+    toast.error("Failed to approve order");
+  }
+};
 
 const FarmerOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("active");
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [stats, setStats] = useState({ active: 0, shipped: 0, history: 0 });
+  const [stats, setStats] = useState({
+    pending: 0,
+    paid: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0,
+  });
+  const [activeFilter, setActiveFilter] = useState("all");
 
-  // Fetch orders from API
   const fetchOrders = async () => {
     try {
-      setLoading(true);
       const response = await api.get("/orders/my-sales");
       const ordersData = response.data || [];
       setOrders(ordersData);
 
       // Calculate stats
-      setStats({
-        active: ordersData.filter((o) => ["pending", "processing"].includes(o.status)).length,
-        shipped: ordersData.filter((o) => o.status === "in_transit").length,
-        history: ordersData.filter((o) => ["delivered", "cancelled"].includes(o.status)).length,
+      const newStats = {
+        pending: 0,
+        paid: 0,
+        shipped: 0,
+        delivered: 0,
+        cancelled: 0,
+      };
+
+      ordersData.forEach((order) => {
+        if (newStats.hasOwnProperty(order.status)) {
+          newStats[order.status]++;
+        }
       });
+
+      setStats(newStats);
     } catch (error) {
       console.error("Failed to fetch orders:", error);
       toast.error("Failed to load orders");
@@ -282,3 +360,103 @@ const FarmerOrders = () => {
     fetchOrders();
   }, []);
 
+  // Filter orders based on active filter
+  const filteredOrders = orders.filter((order) => {
+    if (activeFilter === "all") return true;
+    if (activeFilter === "active")
+      return ["pending", "paid", "shipped"].includes(order.status);
+    return order.status === activeFilter;
+  });
+
+  return (
+    <div className="p-8 bg-[#f8fafc] min-h-screen">
+      {/* Top Status Bar */}
+      <div className="flex flex-wrap gap-4 mb-8">
+        <OrderStatusCard
+          label="All Orders"
+          count={orders.length}
+          icon={Package}
+          active={activeFilter === "all"}
+          onClick={() => setActiveFilter("all")}
+        />
+        <OrderStatusCard
+          label="Active"
+          count={stats.pending + stats.paid + stats.shipped}
+          icon={CheckCircle}
+          active={activeFilter === "active"}
+          onClick={() => setActiveFilter("active")}
+        />
+        <OrderStatusCard
+          label="Pending"
+          count={stats.pending}
+          icon={Clock}
+          active={activeFilter === "pending"}
+          onClick={() => setActiveFilter("pending")}
+        />
+        <OrderStatusCard
+          label="Completed"
+          count={stats.delivered}
+          icon={Package}
+          active={activeFilter === "delivered"}
+          onClick={() => setActiveFilter("delivered")}
+        />
+      </div>
+
+      <h2 className="text-xl font-bold text-slate-900 mb-2">
+        Your Orders {filteredOrders.length > 0 && `(${filteredOrders.length})`}
+      </h2>
+      <p className="text-slate-500 text-sm mb-6">
+        {activeFilter === "all"
+          ? "Manage all your livestock orders"
+          : `Showing ${activeFilter} orders`}
+      </p>
+
+      {/* Loading State */}
+      {loading ? (
+        <div className="space-y-8">
+          {[1, 2].map((i) => (
+            <div
+              key={i}
+              className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-pulse">
+              <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
+                <div className="w-full h-64 bg-slate-200"></div>
+                <div className="p-5 space-y-3">
+                  <div className="h-4 bg-slate-200 rounded w-1/2"></div>
+                  <div className="h-4 bg-slate-200 rounded w-1/3"></div>
+                </div>
+              </div>
+              <div className="lg:col-span-2 bg-slate-100 rounded-2xl p-8">
+                <div className="space-y-4">
+                  <div className="h-4 bg-slate-200 rounded w-1/3"></div>
+                  <div className="h-20 bg-slate-200 rounded"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filteredOrders.length > 0 ? (
+        <div>
+          {filteredOrders.map((order) => (
+            <OrderCard key={order.id} order={order} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-16 bg-white rounded-3xl border border-slate-100">
+          <div className="mb-4">
+            <Package size={48} className="mx-auto text-slate-300" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-700 mb-2">
+            No orders found
+          </h3>
+          <p className="text-slate-400">
+            {activeFilter !== "all"
+              ? `No ${activeFilter} orders at the moment`
+              : "You haven't received any orders yet"}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default FarmerOrders;
