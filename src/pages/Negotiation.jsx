@@ -109,5 +109,25 @@ function Negotiation() {
             <ArrowLeft size={20} />
           </button>
 
+                    {/* Livestock Thumbnail */}
+          <div className="w-10 h-10 rounded-lg overflow-hidden bg-white">
+            <img
+              src={livestock?.image_url || 'https://placehold.co/100x100?text=Animal'}
+              alt={livestock?.species || 'Livestock'}
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          {/* Name and Price */}
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold truncate">
+              {livestock?.breed || ${livestock?.species} - ${receiverName}}
+            </h3>
+            <p className="text-xs text-green-100">
+              Asking: KES {livestock?.price?.toLocaleString() || '0'}
+            </p>
+          </div>
+
+
 
 
