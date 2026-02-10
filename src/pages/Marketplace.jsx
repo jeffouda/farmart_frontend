@@ -146,3 +146,52 @@ function Marketplace() {
       </div>
     </div>
   );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm sticky top-16 z-30">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-bold text-slate-900">Marketplace</h1>
+
+            {/* Search */}
+            <div className="flex-1 max-w-md relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search livestock..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+
+            {/* Mobile Filter Button */}
+            <button
+              onClick={() => setMobileFiltersOpen(true)}
+              className="lg:hidden flex items-center gap-2 px-4 py-2.5 bg-gray-100 rounded-lg"
+            >
+              <Filter className="w-5 h-5" />
+              Filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-6 flex gap-6">
+        {/* Sidebar - Desktop (25%) */}
+        <aside className="hidden lg:block w-64 flex-shrink-0">
+          <div className="bg-white rounded-xl p-5 shadow-sm sticky top-36">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-slate-900">Filters</h2>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="text-sm text-green-600 hover:text-green-700"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+
