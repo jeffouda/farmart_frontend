@@ -193,3 +193,30 @@ const filteredSessions = sessions.filter(session => {
                       </div>
                     </div>
                   </div>
+                   {/* Right: Status & Price */}
+                  <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                    <div className="text-right">
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium mb-1 ${
+                        session.status === 'accepted' ? 'bg-green-100 text-green-700' : 
+                        session.status === 'pending' || session.status === 'counter' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {session.status.toUpperCase()}
+                      </span>
+                      <p className="font-bold text-gray-800">
+                        KES {session.final_price?.toLocaleString() || session.initial_offer?.toLocaleString()}
+                      </p>
+                    </div>
+                    <ArrowLeft className="w-5 h-5 text-gray-400 group-hover:text-green-600 rotate-180" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default NegotiationList;
+
