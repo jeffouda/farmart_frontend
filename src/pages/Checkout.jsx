@@ -4,6 +4,7 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 import { clearCart } from "../redux/cartSlice";
 import toast from "react-hot-toast";
 import api from "../api/axios";
+
 import {
   MapPin,
   Phone,
@@ -92,7 +93,6 @@ const Checkout = () => {
 
   const [errors, setErrors] = useState({});
 
-  // Dynamic Data Source Selection
   const items = useMemo(
     () => bargainOrder?.items || cartItems,
     [bargainOrder, cartItems],
@@ -101,6 +101,10 @@ const Checkout = () => {
     () => Number(bargainOrder?.total_amount || cartTotal || 0),
     [bargainOrder, cartTotal],
   );
+
+  const formatPrice = (price) => `KSh ${Number(price).toLocaleString()}`;
+  const shippingCost = baseTotal > 50000 ? 0 : 1500;
+  const grandTotal = baseTotal + shippingCost;
 
   useEffect(() => {
     if (orderId) fetchBargainOrder();
@@ -126,54 +130,14 @@ const Checkout = () => {
     }
   };
 
-const formatPrice = (price) => `KSh ${Number(price).toLocaleString()}`;
+  useEffect(() => {
+    if (!orderId && cartItems.length === 0 && !loadingOrder) {
+      toast.error("Your cart is empty");
+      navigate("/marketplace");
+    }
+  }, [cartItems, orderId, loadingOrder, navigate]);
 
-const shippingCost = baseTotal > 50000 ? 0 : 1500;
-const grandTotal = baseTotal + shippingCost;
-
-useEffect(() => {
-  if (!orderId && cartItems.length === 0 && !loadingOrder) {
-    toast.error("Your cart is empty");
-    navigate("/marketplace");
-  }
-}, [cartItems, orderId, loadingOrder, navigate]);
-
-if (loadingOrder) {
-  return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div className="text-center">
-        <Loader2 className="w-12 h-12 text-green-600 animate-spin mx-auto mb-4" />
-        <p className="text-slate-600 font-medium">Loading order details...</p>
-      </div>
-    </div>
-  );
-}
-
-if (items.length === 0) {
-  return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="text-center">
-        <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">
-          {bargainOrder ? "No items in order" : "Your cart is empty"}
-        </h2>
-        <p className="text-slate-500 mb-6">
-          {bargainOrder
-            ? "The order has no items."
-            : "Add some livestock to your cart before checking out."}
-        </p>
-        <Link
-          to={bargainOrder ? "/dashboard/orders" : "/marketplace"}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
-          <ArrowLeft size={20} />
-          {bargainOrder ? "Back to Orders" : "Browse Marketplace"}
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-    const handleChange = (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
@@ -181,15 +145,12 @@ if (items.length === 0) {
 
   const validateForm = () => {
     const newErrors = {};
-    
     if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
-
     if (!formData.email.trim()) {
-  newErrors.email = "Email is required";
-} 
-    else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-  newErrors.email = "Invalid email format";
-}
+      newErrors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "Invalid email format";
+    }
     const phone = formData.phone.trim();
     const phoneRegex = /^(?:254|\+254|0)?(7|1)\d{8}$/;
     if (!phone) {
@@ -197,9 +158,8 @@ if (items.length === 0) {
     } else if (!phoneRegex.test(phone)) {
       newErrors.phone = "Enter a valid M-Pesa number";
     }
-
-    if (!formData.county) newErrors.county = 'County is required';
-    if (!formData.town.trim()) newErrors.town = 'Town/Location is required';
+    if (!formData.county) newErrors.county = "County is required";
+    if (!formData.town.trim()) newErrors.town = "Town/Location is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -207,82 +167,69 @@ if (items.length === 0) {
 
   const pollPaymentStatus = async (id, toastId) => {
     let attempts = 0;
-    const maxAttempts = 30; // Increased for longer checkout process
+    const maxAttempts = 30;
 
     const interval = setInterval(async () => {
       try {
         attempts++;
         const response = await api.get(`/orders/poll-status/${id}`);
-        const data = response.data;
+        const { status } = response.data;
 
-        if (data.status === "completed") {
+        if (
+          status === "paid" ||
+          status === "completed" ||
+          status === "delivered"
+        ) {
           clearInterval(interval);
-          toast.success("Payment confirmed! Order created.", { id: toastId });
+          setIsWaitingForMpesa(false);
+          setSubmitting(false);
+          toast.success("Payment confirmed!", { id: toastId });
           if (!bargainOrder) dispatch(clearCart());
-          // Navigate to order confirmation with the actual order_id
-          navigate(`/order-confirmation/${data.order_id || id}`);
-        } else if (data.status === "failed" || attempts >= maxAttempts) {
-
-        if (status === "paid" || status === "delivered") {
-        clearInterval(interval);
-        setIsWaitingForMpesa(false);
-        setSubmitting(false);
-        toast.success("Payment confirmed!", { id: toastId });
-        if (!bargainOrder) dispatch(clearCart());
-        navigate(`/order-confirmation/${id}`);
-        } 
-        
-        else if (status === "failed" || attempts >= maxAttempts) {
-
+          navigate(`/order-confirmation/${id}`);
+        } else if (status === "failed" || attempts >= maxAttempts) {
           clearInterval(interval);
           setIsWaitingForMpesa(false);
           setSubmitting(false);
           toast.error(
-            data.status === "failed"
+            status === "failed"
               ? "Payment failed or was cancelled."
               : "Request timed out. Check your orders page for status.",
             { id: toastId },
           );
         }
-        // If status is "pending" or "processing", continue polling
-        const handlePlaceOrder = async () => {
-  if (!validateForm()) return;
+      } catch (error) {
+        console.error("Polling error:", error);
+      }
+    }, 3000);
+  };
 
-  setSubmitting(true);
-  const loadingToastId = toast.loading("Processing...");
+  const handlePlaceOrder = async () => {
+    if (!validateForm()) return;
 
-  try {
-       
-    const orderPayload = {
-      items: items.map((item) => ({
-        animal_id: item.animal_id || item.id,
-        quantity: item.quantity || 1,
-        price: item.price,
-      })),
-      total_amount: grandTotal,
-      payment_method: formData.paymentMethod,
-      phone_number: formData.phone,
-      shipping_address: `${formData.town}, ${formData.county}. ${formData.instructions}`,
-    };
+    setSubmitting(true);
+    const loadingToastId = toast.loading("Processing...");
 
-    let currentOrderId;
-    if (bargainOrder) {
-      await api.put(`/orders/${bargainOrder.id}`, orderPayload);
-      currentOrderId = bargainOrder.id;
-    } 
-    // try ends here but no catch/finally
+    try {
+      const orderPayload = {
+        items: items.map((item) => ({
+          animal_id: item.animal_id || item.id,
+          quantity: item.quantity || 1,
+          price: item.price,
+        })),
+        total_amount: grandTotal,
+        payment_method: formData.paymentMethod,
+        phone_number: formData.phone,
+        shipping_address: `${formData.town}, ${formData.county}. ${formData.instructions}`,
+      };
 
-      
-      else {
+      let currentOrderId;
+      if (bargainOrder) {
+        await api.put(`/orders/${bargainOrder.id}`, orderPayload);
+        currentOrderId = bargainOrder.id;
+      } else {
         const response = await api.post("/orders/", orderPayload);
-        // Handle both response formats: {order_id: ...} or {order: {id: ...}}
         currentOrderId =
           response.data.order_id || response.data.order?.id || response.data.id;
-
-        // Fallback: If still no order_id, try to parse from mpesa_response
-        if (!currentOrderId && response.data.mpesa_response) {
-          console.warn("Order created but order_id not in expected format");
-        }
       }
 
       if (!currentOrderId) {
@@ -295,31 +242,56 @@ if (items.length === 0) {
           id: loadingToastId,
         });
         pollPaymentStatus(currentOrderId, loadingToastId);
-      } 
-      
-      else {
-        toast.success(
-          "Farmart: Payment Received! Your animal is now secured!!",
-          { id: loadingToastId },
-        );
-        
-       if (!bargainOrder) dispatch(clearCart());
+      } else {
+        toast.success("Farmart: Order placed successfully!", {
+          id: loadingToastId,
+        });
+        if (!bargainOrder) dispatch(clearCart());
+        setSubmitting(false);
         navigate(`/order-confirmation/${currentOrderId}`);
       }
-    } 
-        catch (error) {
-        setSubmitting(false);
-        toast.error(
+    } catch (error) {
+      setSubmitting(false);
+      toast.error(
         error.response?.data?.message ||
-        error.response?.data?.error ||
-        "Failed to place order. Please try again.",
+          error.response?.data?.error ||
+          "Failed to place order.",
         { id: loadingToastId },
-  );
-     }
+      );
+    }
   };
 
-
+  if (loadingOrder) {
     return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-green-600 animate-spin mx-auto mb-4" />
+          <p className="text-slate-600 font-medium">Loading order details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">
+            {bargainOrder ? "No items in order" : "Your cart is empty"}
+          </h2>
+          <Link
+            to={bargainOrder ? "/dashboard/orders" : "/marketplace"}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
+            <ArrowLeft size={20} />
+            {bargainOrder ? "Back to Orders" : "Browse Marketplace"}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
     <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
       {isWaitingForMpesa && (
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -365,8 +337,11 @@ if (items.length === 0) {
                     placeholder="07XXXXXXXX"
                     value={formData.phone}
                     onChange={handleChange}
-                    className={`w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${errors.phone ? "border-red-500" : "border-slate-200"}`} 
-                    />
+                    className={`w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${errors.phone ? "border-red-500" : "border-slate-200"}`}
+                  />
+                  {errors.phone && (
+                    <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-semibold">Full Name *</label>
@@ -472,7 +447,9 @@ if (items.length === 0) {
                 ) : (
                   <Check size={20} />
                 )}
-                {formData.paymentMethod === "mpesa" ? "Pay Now" : "Confirm"}
+                {formData.paymentMethod === "mpesa"
+                  ? "Pay Now"
+                  : "Confirm Order"}
               </button>
             </div>
           </div>
