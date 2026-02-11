@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { removeFromCart, increaseQuantity, decreaseQuantity } from '../redux/cartSlice';
@@ -153,6 +153,8 @@ const Cart = () => {
                 disabled={isCheckingOut || items.length === 0}
                 className="w-full py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label={currentUser ? 'Proceed to checkout' : 'Login to checkout'}>
+                {isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}
+              </button>
 
               <Link
                 to="/browse"
