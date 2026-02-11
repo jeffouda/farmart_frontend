@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import api from '../api/axios';
+import { createContext, useContext, useState, useEffect } from "react";
+import api from "../api/axios";
 
 const AuthContext = createContext(null);
 
@@ -7,16 +7,16 @@ const AuthContext = createContext(null);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
 
 export const AuthProvider = ({ children }) => {
-  // Synchronous initialization from localStorage - state is ready on FIRST RENDER
+  // Initialize state from localStorage
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const savedUser = localStorage.getItem('currentUser');
+      const savedUser = localStorage.getItem("currentUser");
       return savedUser ? JSON.parse(savedUser) : null;
     } catch {
       return null;
@@ -24,157 +24,164 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [token, setToken] = useState(() => {
-    return localStorage.getItem('access_token') || null;
+    return localStorage.getItem("access_token") || null;
   });
 
-  const [loading, setLoading] = useState(false); // No loading needed since we sync init
+  const [loading, setLoading] = useState(false);
 
-  // Configure axios headers when token changes
+  // Sync Axios headers whenever token changes
   useEffect(() => {
     if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     } else {
-      delete api.defaults.headers.common['Authorization'];
+      delete api.defaults.headers.common["Authorization"];
     }
   }, [token]);
 
-  // Verify token in background (only if we have a token)
+  // Verify token whenever it changes
   useEffect(() => {
-    const verifyToken = async () => {
-      if (!token) return;
+    if (!token) return;
 
+    const verifyToken = async () => {
+      setLoading(true);
       try {
-        const response = await api.get('/auth/me');
+        const response = await api.get("/auth/me");
         const freshUser = response.data;
-        // Only update if user changed
+
+        // Only update if user data changed
         if (JSON.stringify(freshUser) !== JSON.stringify(currentUser)) {
           setCurrentUser(freshUser);
-          localStorage.setItem('currentUser', JSON.stringify(freshUser));
+          localStorage.setItem("currentUser", JSON.stringify(freshUser));
         }
       } catch (error) {
-        // Token invalid - clear auth
-        console.log('Token verification failed, logging out');
+        console.log("Token verification failed, logging out");
         logout();
+      } finally {
+        setLoading(false);
       }
     };
 
     verifyToken();
-  }, []);
+  }, [token]); // <-- run when token changes
 
   /**
-   * Login user with credentials
+   * Login user
    * @param {Object} credentials - { email, password }
-   * @returns {Object|null} - User data or null on failure
+   * @returns {Object|null} - User data or null
    */
   const login = async (credentials) => {
+    setLoading(true);
     try {
-      const response = await api.post('/auth/login', credentials);
+      const response = await api.post("/auth/login", credentials);
       const { access_token, user } = response.data;
 
-      // Set token and user synchronously
+      // Save token and user
       setToken(access_token);
       setCurrentUser(user);
-      localStorage.setItem('access_token', access_token);
-      localStorage.setItem('currentUser', JSON.stringify(user));
+      localStorage.setItem("access_token", access_token);
+      localStorage.setItem("currentUser", JSON.stringify(user));
 
-      console.log('✅ Login successful:', user.email, '- Role:', user.role);
+      console.log("✅ Login successful:", user.email, "- Role:", user.role);
       return user;
     } catch (error) {
-      console.error('❌ Login failed:', error.response?.data?.message || error.message);
+      console.error(
+        "❌ Login failed:",
+        error.response?.data?.message || error.message,
+      );
       return null;
+    } finally {
+      setLoading(false);
     }
   };
 
   /**
-   * Register new user
-   * @param {Object} userData - { email, password, fullName, role, ... }
-   * @returns {Object} - { success: boolean, user?, error? }
+   * Register user
+   * @param {Object} userData
+   * @returns {Object} - { success, user?, error? }
    */
   const register = async (userData) => {
+    setLoading(true);
     try {
-      const response = await api.post('/auth/register', userData);
+      const response = await api.post("/auth/register", userData);
       const { access_token, user } = response.data;
 
-      // Set token and user synchronously
+      // Save token and user
       setToken(access_token);
       setCurrentUser(user);
-      localStorage.setItem('access_token', access_token);
-      localStorage.setItem('currentUser', JSON.stringify(user));
+      localStorage.setItem("access_token", access_token);
+      localStorage.setItem("currentUser", JSON.stringify(user));
 
-      console.log('✅ Registration successful:', user.email);
+      console.log("✅ Registration successful:", user.email);
       return { success: true, user };
     } catch (error) {
-      console.error('❌ Registration failed:', error.response?.data?.message || error.message);
+      console.error(
+        "❌ Registration failed:",
+        error.response?.data?.message || error.message,
+      );
       return {
         success: false,
-        error: error.response?.data?.message || 'Registration failed'
+        error: error.response?.data?.message || "Registration failed",
       };
+    } finally {
+      setLoading(false);
     }
   };
 
   /**
-   * Logout user and clear all auth state
+   * Logout user
    */
   const logout = () => {
-    console.log('🚪 Logging out:', currentUser?.email);
-    
-    // Clear state
+    console.log("🚪 Logging out:", currentUser?.email);
     setCurrentUser(null);
     setToken(null);
-    
-    // Clear localStorage
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('currentUser');
-    
-    // Axios headers are cleared by useEffect when token is null
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("currentUser");
+    // Axios headers are cleared by useEffect
   };
 
   /**
-   * Update user profile data
-   * @param {Object} userData - Updated user fields
+   * Update user profile
+   * @param {Object} userData
    */
   const updateProfile = async (userData) => {
+    setLoading(true);
     try {
-      const response = await api.put('/auth/profile', userData);
+      const response = await api.put("/auth/profile", userData);
       const updatedUser = response.data;
-      
+
       setCurrentUser(updatedUser);
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-      
-      console.log('✅ Profile updated');
+      localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+
+      console.log("✅ Profile updated");
       return { success: true, user: updatedUser };
     } catch (error) {
-      console.error('❌ Profile update failed:', error.response?.data?.message || error.message);
+      console.error(
+        "❌ Profile update failed:",
+        error.response?.data?.message || error.message,
+      );
       return {
         success: false,
-        error: error.response?.data?.message || 'Profile update failed'
+        error: error.response?.data?.message || "Profile update failed",
       };
+    } finally {
+      setLoading(false);
     }
   };
 
   // Context value
   const value = {
-    // State
     currentUser,
     setCurrentUser,
     token,
     loading,
-    
-    // Computed
     isAuthenticated: !!currentUser && !!token,
-    
-    // Methods
     login,
     register,
     logout,
     updateProfile,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export default AuthContext;
