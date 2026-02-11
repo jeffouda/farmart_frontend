@@ -1,30 +1,41 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Filter, X } from 'lucide-react';
-import { useDispatch, useSelector } from 'react-redux';
-import { addToCart } from '../redux/cartSlice';
-import { addToWishlist, removeFromWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
-import { useAuth } from '../context/AuthContext';
-import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
-import api from '../api/axios';
-import LivestockCard from '../components/LivestockCard';
+import React, { useState, useEffect, useMemo } from "react";
+import { Search, Filter, X } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { addToCart } from "../redux/cartSlice";
+import {
+  addToWishlist,
+  removeFromWishlist,
+  optimisticRemoveFromWishlist,
+} from "../redux/wishlistSlice";
+import { useAuth } from "../context/AuthContext";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
-const ANIMAL_TYPES = ['Cattle', 'Goats', 'Sheep', 'Chicken', 'Pig'];
+const ANIMAL_TYPES = ["Cattle", "Goats", "Sheep", "Chicken", "Pig"];
 const LOCATIONS = [
-  'Nairobi City', 'Kiambu', 'Nakuru', 'Kisumu', 'Eldoret',
-  'Mombasa', 'Narok', 'Kajiado', 'Thika', 'Machakos'
+  "Nairobi City",
+  "Kiambu",
+  "Nakuru",
+  "Kisumu",
+  "Eldoret",
+  "Mombasa",
+  "Narok",
+  "Kajiado",
+  "Thika",
+  "Machakos",
 ];
 const SORT_OPTIONS = [
-  { value: 'newest', label: 'Newest' },
-  { value: 'price_low', label: 'Price: Low to High' },
-  { value: 'price_high', label: 'Price: High to Low' },
+  { value: "newest", label: "Newest" },
+  { value: "price_low", label: "Price: Low to High" },
+  { value: "price_high", label: "Price: High to Low" },
 ];
 
 function Marketplace() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const wishlistItems = useSelector(state => state.wishlist.items);
+  const wishlistItems = useSelector((state) => state.wishlist.items);
 
   // State
   const [livestock, setLivestock] = useState([]);
@@ -33,11 +44,11 @@ function Marketplace() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // Filter state
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [priceRange, setPriceRange] = useState({ min: '', max: '' });
-  const [selectedLocation, setSelectedLocation] = useState('');
-  const [sortBy, setSortBy] = useState('newest');
+  const [priceRange, setPriceRange] = useState({ min: "", max: "" });
+  const [selectedLocation, setSelectedLocation] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
 
   // Fetch livestock from API
   useEffect(() => {
@@ -48,18 +59,19 @@ function Marketplace() {
 
         // Build query params
         const params = new URLSearchParams();
-        if (searchQuery) params.append('search', searchQuery);
-        if (selectedCategories.length > 0) params.append('species', selectedCategories.join(','));
-        if (priceRange.min) params.append('min_price', priceRange.min);
-        if (priceRange.max) params.append('max_price', priceRange.max);
-        if (selectedLocation) params.append('location', selectedLocation);
-        params.append('sort', sortBy);
+        if (searchQuery) params.append("search", searchQuery);
+        if (selectedCategories.length > 0)
+          params.append("species", selectedCategories.join(","));
+        if (priceRange.min) params.append("min_price", priceRange.min);
+        if (priceRange.max) params.append("max_price", priceRange.max);
+        if (selectedLocation) params.append("location", selectedLocation);
+        params.append("sort", sortBy);
 
         const response = await api.get(`/livestock?${params.toString()}`);
         setLivestock(response.data.animals || response.data || []);
       } catch (error) {
-        console.error('Failed to fetch livestock:', error);
-        setError('Failed to load livestock. Please try again.');
+        console.error("Failed to fetch livestock:", error);
+        setError("Failed to load livestock. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -70,69 +82,77 @@ function Marketplace() {
 
   // Check if item is in wishlist
   const isInWishlist = (id) => {
-    return wishlistItems.some(item =>
-      String(item.animal?.id) === String(id) || String(item.animal_id) === String(id)
+    return wishlistItems.some(
+      (item) =>
+        String(item.animal?.id) === String(id) ||
+        String(item.animal_id) === String(id),
     );
   };
 
   // Handle add to cart
   const handleAddToCart = (id) => {
     if (!currentUser) {
-      toast.error('Please login to add items to cart');
-      navigate('/auth');
+      toast.error("Please login to add items to cart");
+      navigate("/auth");
       return;
     }
 
-    const item = livestock.find(l => String(l.id) === String(id));
+    const item = livestock.find((l) => String(l.id) === String(id));
     if (item) {
-      dispatch(addToCart({
-        id: item.id,
-        name: `${item.species} - ${item.breed}`,
-        price: item.price,
-        image: item.image_url || item.image
-      }));
-      toast.success('Added to cart!');
+      dispatch(
+        addToCart({
+          id: item.id,
+          name: `${item.species} - ${item.breed}`,
+          price: item.price,
+          image: item.image_url || item.image,
+        }),
+      );
+      toast.success("Added to cart!");
     }
   };
 
   // Handle toggle wishlist
   const handleToggleWishlist = (id) => {
     if (!currentUser) {
-      toast.error('Please login to save items');
-      navigate('/auth');
+      toast.error("Please login to save items");
+      navigate("/auth");
       return;
     }
 
     if (isInWishlist(id)) {
       dispatch(optimisticRemoveFromWishlist(id));
       dispatch(removeFromWishlist(id));
-      toast.success('Removed from wishlist');
+      toast.success("Removed from wishlist");
     } else {
       dispatch(addToWishlist(id));
-      toast.success('Added to wishlist!');
+      toast.success("Added to wishlist!");
     }
   };
 
   // Toggle category checkbox
   const handleCategoryToggle = (category) => {
-    setSelectedCategories(prev =>
+    setSelectedCategories((prev) =>
       prev.includes(category)
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
+        ? prev.filter((c) => c !== category)
+        : [...prev, category],
     );
   };
 
   // Clear all filters
   const clearFilters = () => {
-    setSearchQuery('');
+    setSearchQuery("");
     setSelectedCategories([]);
-    setPriceRange({ min: '', max: '' });
-    setSelectedLocation('');
-    setSortBy('newest');
+    setPriceRange({ min: "", max: "" });
+    setSelectedLocation("");
+    setSortBy("newest");
   };
 
   // Has active filters
-  const hasActiveFilters = selectedCategories.length > 0 || priceRange.min || priceRange.max || selectedLocation;
+  const hasActiveFilters =
+    selectedCategories.length > 0 ||
+    priceRange.min ||
+    priceRange.max ||
+    selectedLocation;
 
   // Skeleton loader
   const SkeletonCard = () => (
@@ -197,10 +217,15 @@ function Marketplace() {
 
             {/* Category Filter */}
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Category</h3>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                Category
+              </h3>
               <div className="space-y-2">
                 {ANIMAL_TYPES.map((type) => (
-                  <label key={type} className="flex items-center gap-2 cursor-pointer">
+                  <label
+                    key={type}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
                     <input
                       type="checkbox"
                       checked={selectedCategories.includes(type)}
@@ -215,20 +240,26 @@ function Marketplace() {
 
             {/* Price Range Filter */}
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Price Range (KES)</h3>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                Price Range (KES)
+              </h3>
               <div className="flex gap-2">
                 <input
                   type="number"
                   placeholder="Min"
                   value={priceRange.min}
-                  onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                  onChange={(e) =>
+                    setPriceRange({ ...priceRange, min: e.target.value })
+                  }
                   className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
                 <input
                   type="number"
                   placeholder="Max"
                   value={priceRange.max}
-                  onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                  onChange={(e) =>
+                    setPriceRange({ ...priceRange, max: e.target.value })
+                  }
                   className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
@@ -236,7 +267,9 @@ function Marketplace() {
 
             {/* Location Filter */}
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Location</h3>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                Location
+              </h3>
               <select
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
@@ -244,21 +277,27 @@ function Marketplace() {
               >
                 <option value="">All Locations</option>
                 {LOCATIONS.map((loc) => (
-                  <option key={loc} value={loc}>{loc}</option>
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
                 ))}
               </select>
             </div>
 
             {/* Sort By */}
             <div>
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Sort By</h3>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                Sort By
+              </h3>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -270,7 +309,11 @@ function Marketplace() {
           {/* Results count */}
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm text-slate-500">
-              Showing <span className="font-semibold text-slate-900">{livestock.length}</span> animals
+              Showing{" "}
+              <span className="font-semibold text-slate-900">
+                {livestock.length}
+              </span>{" "}
+              animals
             </p>
           </div>
 
@@ -305,7 +348,9 @@ function Marketplace() {
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
                 No animals found matching your filters
               </h3>
-              <p className="text-slate-500 mb-4">Try adjusting your filters or search query</p>
+              <p className="text-slate-500 mb-4">
+                Try adjusting your filters or search query
+              </p>
               <button
                 onClick={clearFilters}
                 className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
@@ -319,21 +364,64 @@ function Marketplace() {
           {!loading && !error && livestock.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
               {livestock.map((animal) => (
-                <LivestockCard
+                <div
                   key={animal.id}
-                  animal={{
-                    id: animal.id,
-                    breed: animal.breed,
-                    species: animal.species,
-                    price: animal.price,
-                    image_url: animal.image_url || animal.image,
-                    location: animal.location,
-                    age: animal.age,
-                    weight: animal.weight
-                  }}
-                  onAddToCart={handleAddToCart}
-                  onToggleWishlist={handleToggleWishlist}
-                />
+                  className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => navigate(`/livestock/${animal.id}`)}
+                >
+                  <div className="relative h-48 bg-slate-100">
+                    <img
+                      src={
+                        animal.image_url || animal.image || "/placeholder.jpg"
+                      }
+                      alt={animal.breed}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = "/placeholder.jpg";
+                      }}
+                    />
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-slate-900 text-lg mb-1">
+                      {animal.breed}
+                    </h3>
+                    <p className="text-sm text-slate-500 mb-2">
+                      {animal.species}
+                    </p>
+                    {animal.location && (
+                      <p className="text-xs text-slate-400 mb-2">
+                        {animal.location}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
+                      {animal.age && <span>Age: {animal.age}</span>}
+                      {animal.weight && <span>Weight: {animal.weight}kg</span>}
+                    </div>
+                    <p className="text-green-600 font-bold text-lg mb-3">
+                      KSh {Number(animal.price).toLocaleString()}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(animal);
+                        }}
+                        className="flex-1 bg-green-600 text-white text-sm py-2 rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        Add to Cart
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleWishlist(animal);
+                        }}
+                        className="px-3 py-2 border border-slate-200 rounded-lg text-slate-500 hover:text-red-500 hover:border-red-200 transition-colors"
+                      >
+                        ♥
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -360,10 +448,15 @@ function Marketplace() {
 
             {/* Category */}
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Category</h3>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                Category
+              </h3>
               <div className="space-y-2">
                 {ANIMAL_TYPES.map((type) => (
-                  <label key={type} className="flex items-center gap-2 cursor-pointer">
+                  <label
+                    key={type}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
                     <input
                       type="checkbox"
                       checked={selectedCategories.includes(type)}
@@ -378,20 +471,26 @@ function Marketplace() {
 
             {/* Price */}
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Price Range (KES)</h3>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                Price Range (KES)
+              </h3>
               <div className="flex gap-2">
                 <input
                   type="number"
                   placeholder="Min"
                   value={priceRange.min}
-                  onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                  onChange={(e) =>
+                    setPriceRange({ ...priceRange, min: e.target.value })
+                  }
                   className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm"
                 />
                 <input
                   type="number"
                   placeholder="Max"
                   value={priceRange.max}
-                  onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                  onChange={(e) =>
+                    setPriceRange({ ...priceRange, max: e.target.value })
+                  }
                   className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm"
                 />
               </div>
@@ -399,7 +498,9 @@ function Marketplace() {
 
             {/* Location */}
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Location</h3>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                Location
+              </h3>
               <select
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
@@ -407,21 +508,27 @@ function Marketplace() {
               >
                 <option value="">All Locations</option>
                 {LOCATIONS.map((loc) => (
-                  <option key={loc} value={loc}>{loc}</option>
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
                 ))}
               </select>
             </div>
 
             {/* Sort */}
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Sort By</h3>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">
+                Sort By
+              </h3>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-100 rounded-lg text-sm"
               >
                 {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -449,5 +556,3 @@ function Marketplace() {
 }
 
 export default Marketplace;
-
-
