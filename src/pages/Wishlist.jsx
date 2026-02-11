@@ -75,6 +75,32 @@ const Wishlist = () => {
             {wishlistItems.length}
           </span>
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {wishlistItems.map((item) => {
+        const animal = getAnimalData(item);
+        return (
+          <div
+            key={item.id}
+            className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            {/* Image */}
+            <div className="relative aspect-[4/3] overflow-hidden">
+              {animal.image || animal.image_url ? (
+                <img
+                  src={animal.image || animal.image_url}
+                  alt={animal.name || animal.species}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-slate-100 flex items-center justify-center">
+                  <Heart className="w-12 h-12 text-slate-300" />
+                </div>
+              )}
+              {animal.category && (
+                <div className="absolute top-3 left-3 px-2 py-1 bg-green-600 text-white text-[10px] font-black uppercase tracking-wider rounded-lg">
+                  {animal.category}
+                </div>
+              )}
+            </div>
 
 
 
