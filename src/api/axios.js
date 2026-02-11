@@ -1,44 +1,39 @@
-import axios from 'axios';
+import axios from "axios";
 
-// Create axios instance with base URL - use relative path for Vite proxy
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api',
+  // This now points to your permanent static ngrok domain
+  baseURL: "https://aglisten-armida-confarreate.ngrok-free.dev/api",
+  withCredentials: true,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
   },
+  withCredentials: true
 });
 
-// Request interceptor - Add JWT token to headers
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem("access_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error),
 );
 
-// Response interceptor - Handle 401 errors
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid - Clear storage and redirect to login
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      // Redirect to auth page if not already there
-      if (!window.location.pathname.includes('/auth')) {
-        window.location.href = '/auth';
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("user");
+      if (!window.location.pathname.includes("/auth")) {
+        window.location.href = "/auth";
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;
