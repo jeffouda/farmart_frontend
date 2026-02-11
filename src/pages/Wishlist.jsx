@@ -101,6 +101,37 @@ const Wishlist = () => {
                 </div>
               )}
             </div>
+            {/* Content */}
+            <div className="p-4">
+              <h3 className="font-bold text-slate-900 mb-2 truncate">
+                {animal.name || animal.species}
+              </h3>
+              <p className="text-xl font-black text-orange-500 mb-4">
+                {formatPrice(animal.price)}
+              </p>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleMoveToCart(item)}
+                  className="flex-1 py-2.5 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2">
+                  <ShoppingCart size={16} />
+                  Move to Cart
+                </button>
+                <button
+                  onClick={() => handleRemoveFromWishlist(item)}
+                  className="px-3 py-2.5 border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+                  title="Remove from wishlist">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+</div>
 
 
 
