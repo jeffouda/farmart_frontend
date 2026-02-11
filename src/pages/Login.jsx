@@ -28,10 +28,29 @@ const Login = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage(null);
+
+    // Validate email format
+    if (!validateEmail(formData.email)) {
+      setMessage({ type: 'error', text: 'Please enter a valid email address' });
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate password length
+    if (formData.password.length < 6) {
+      setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const loggedInUser = await login(formData);
