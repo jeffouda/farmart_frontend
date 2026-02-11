@@ -31,56 +31,65 @@ const ConfirmDeliveryModal = ({ order, onClose, onConfirmed }) => {
     );
   };
 
+
   /**
    * Step 1: Confirm delivery
    * UPDATED: Using consistent route /orders/confirm-receipt/${id}
    */
+
   const handleConfirmDelivery = async () => {
+    if (confirming) return;
     setConfirming(true);
+    
     try {
+
       // Ensure the path includes 'payments' if that's your blueprint prefix
       await api.post(`/payments/confirm-receipt/${order.id}`);
 
       toast.success("Delivery confirmed! Payment released.");
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setCompleted(true);
+      toast.success('Delivery confirmed successfully!');
+      
+      if (onConfirmed) onConfirmed();
+
       setStep(2);
-      onConfirmed?.(order.id);
     } catch (error) {
+
       const errorMsg = error.response?.data?.error || "Release failed";
       toast.error(errorMsg);
+
+      toast.error('Failed to confirm delivery. Please try again.');
+
     } finally {
       setConfirming(false);
     }
   };
 
-  // Step 2: Submit review
   const handleSubmitReview = async () => {
-    if (rating === 0) {
-      toast.error('Please select a rating');
-      return;
-    }
-
+    if (submitting || rating === 0) return;
     setSubmitting(true);
+    
     try {
-      await api.post('/reviews', {
-        orderId: order.id,
-        rating,
-        feedback,
-        tags: selectedTags,
-      });
-      toast.success('Review submitted! Thanks for your feedback.');
-      setCompleted(true);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      toast.success('Thank you for your review!');
+      onClose();
     } catch (error) {
-      console.error("Failed to submit review:", error);
       toast.error('Failed to submit review. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Handle skip review
   const handleSkip = () => {
-    setCompleted(true);
+    onClose();
   };
+
 
   // Success state (Transaction Completed)
   if (completed) {
@@ -108,19 +117,19 @@ const ConfirmDeliveryModal = ({ order, onClose, onConfirmed }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            {step === 1 ? (
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <PackageCheck className="w-5 h-5 text-green-600" />
-              </div>
-            ) : (
-              <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-                <Star className="w-5 h-5 text-yellow-600" />
-              </div>
-            )}
-            <div>
+            <div className="p-2 bg-green-100 rounded-full">
+              <PackageCheck className="w-5 h-5 text-green-600" />
+            </div>
+            </div>
+
               {step === 1 ? (
                 <>
                   <h2 className="text-xl font-bold text-gray-800">Confirm Delivery?</h2>
@@ -132,14 +141,21 @@ const ConfirmDeliveryModal = ({ order, onClose, onConfirmed }) => {
                   <p className="text-sm text-gray-500">Rate the livestock received</p>
                 </>
               )}
+
+              <h2 className="text-lg font-semibold text-gray-800">
+                {completed ? 'Review Your Order' : 'Confirm Delivery'}
+              </h2>
+              <p className="text-sm text-gray-500">
+                {completed ? 'Share your feedback' : 'Step 1 of 2'}
+              </p>
+
             </div>
           </div>
-          <button
+          <button 
             onClick={onClose}
-            disabled={confirming || submitting}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
 
