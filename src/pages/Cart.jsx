@@ -82,7 +82,9 @@ const Cart = () => {
                   <div className="flex items-center gap-3 mt-3">
                     <button
                       onClick={() => dispatch(decreaseQuantity(item.id))}
-                      className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                      className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                      aria-label={`Decrease quantity of ${item.name}`}
+                      disabled={item.quantity <= 1}>
                       <Minus size={16} className="text-slate-600" />
                     </button>
                     <span className="w-8 text-center font-medium text-slate-900">
