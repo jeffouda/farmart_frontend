@@ -28,10 +28,29 @@ const Login = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage(null);
+
+    // Validate email format
+    if (!validateEmail(formData.email)) {
+      setMessage({ type: 'error', text: 'Please enter a valid email address' });
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate password length
+    if (formData.password.length < 6) {
+      setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const loggedInUser = await login(formData);
@@ -46,7 +65,7 @@ const Login = () => {
         } else if (cleanRole === 'farmer') {
           navigate('/farmer-dashboard', { replace: true });
         } else {
-          navigate('/marketplace', { replace: true });
+          navigate('/browse', { replace: true });
         }
       } else {
         setMessage({
@@ -143,18 +162,21 @@ const Login = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
                   Email Address
-                </label>
+               late-700 mb </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
+                    id="email"
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="you@example.com"
                     required
+                    autoComplete="email"
+                    aria-describedby="email-helper"
                     className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   />
                 </div>
@@ -243,3 +265,4 @@ const Login = () => {
 };
 
 export default Login;
+
