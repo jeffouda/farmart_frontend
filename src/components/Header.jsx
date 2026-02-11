@@ -35,3 +35,35 @@ function Header() {
               Livestock Direct
             </span>
           </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+            className="text-slate-800 text-lg md:text-xl font-bold mt-8 max-w-2xl mx-auto drop-shadow-sm">
+            Connect with trusted farmers and buyers. Trade cattle, sheep, goats,
+            and more with total transparency and secure logistics.
+          </motion.p>
+
+                    <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.6 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center mt-12">
+            <a
+              href="/browse"
+              className="bg-black text-white px-10 py-4 rounded-2xl font-black uppercase text-sm tracking-widest hover:bg-green-600 transition-all shadow-xl flex items-center justify-center gap-2">
+              Browse Animals <ChevronRight size={18} />
+            </a>
+            <a
+              href={isAuthenticated ? "/sell" : "#"}
+              onClick={handleSellClick}
+              className="bg-white/90 backdrop-blur-sm border-2 border-slate-200 text-slate-900 px-10 py-4 rounded-2xl font-black uppercase text-sm tracking-widest hover:border-green-600 hover:text-green-600 transition-all flex items-center justify-center shadow-sm">
+              Sell Livestock
+            </a>
+          </motion.div>
+        </div>
+
+        {/* Bottom fade - ensures a clean transition into the white About section */}
+        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white to-transparent" />
+      </div>
