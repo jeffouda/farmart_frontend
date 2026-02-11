@@ -44,6 +44,22 @@ const Wishlist = () => {
     dispatch(removeFromWishlist(animalId));
     toast.success(${animal.name || animal.species} removed from wishlist);
   };
+  if (wishlistItems.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <Heart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-800 mb-2">Your wishlist is empty</h2>
+          <p className="text-slate-500 mb-6">Save items you want to watch here</p>
+          <Link
+            to="/browse"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
+            Browse Livestock
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
 
 
