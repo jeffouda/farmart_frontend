@@ -3,6 +3,7 @@ import api from '../api/axios';
 
 const AuthContext = createContext(null);
 
+// Custom hook for easy access to auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -12,84 +13,98 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  // Initialize auth state from localStorage on mount
-  useEffect(() => {
-    const initializeAuth = async () => {
-      const token = localStorage.getItem('access_token');
+  // Synchronous initialization from localStorage - state is ready on FIRST RENDER
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
       const savedUser = localStorage.getItem('currentUser');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
+  });
 
-      // If no token exists, we're not authenticated - stop loading immediately
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('access_token') || null;
+  });
 
-      // Token exists - restore saved user immediately
-      if (savedUser) {
-        try {
-          const user = JSON.parse(savedUser);
-          setCurrentUser(user);
-        } catch (e) {
-          localStorage.removeItem('currentUser');
-        }
-      }
+  const [loading, setLoading] = useState(false); // No loading needed since we sync init
 
-      // Verify token and fetch fresh user data
+  // Configure axios headers when token changes
+  useEffect(() => {
+    if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete api.defaults.headers.common['Authorization'];
+    }
+  }, [token]);
+
+  // Verify token in background (only if we have a token)
+  useEffect(() => {
+    const verifyToken = async () => {
+      if (!token) return;
+
       try {
         const response = await api.get('/auth/me');
         const freshUser = response.data;
-        setCurrentUser(freshUser);
-        localStorage.setItem('currentUser', JSON.stringify(freshUser));
+        // Only update if user changed
+        if (JSON.stringify(freshUser) !== JSON.stringify(currentUser)) {
+          setCurrentUser(freshUser);
+          localStorage.setItem('currentUser', JSON.stringify(freshUser));
+        }
       } catch (error) {
-        console.error('Failed to fetch user data:', error);
-        // Token is invalid or expired - clear auth
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('currentUser');
-        setCurrentUser(null);
+        // Token invalid - clear auth
+        console.log('Token verification failed, logging out');
+        logout();
       }
-
-      // Always stop loading after token check completes
-      setLoading(false);
     };
 
-    initializeAuth();
+    verifyToken();
   }, []);
 
+  /**
+   * Login user with credentials
+   * @param {Object} credentials - { email, password }
+   * @returns {Object|null} - User data or null on failure
+   */
   const login = async (credentials) => {
-    setLoading(true);
     try {
       const response = await api.post('/auth/login', credentials);
       const { access_token, user } = response.data;
 
-      // Save to localStorage
+      // Set token and user synchronously
+      setToken(access_token);
+      setCurrentUser(user);
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('currentUser', JSON.stringify(user));
 
-      setCurrentUser(user);
+      console.log('✅ Login successful:', user.email, '- Role:', user.role);
       return user;
     } catch (error) {
-      setCurrentUser(null);
+      console.error('❌ Login failed:', error.response?.data?.message || error.message);
       return null;
-    } finally {
-      setLoading(false);
     }
   };
 
+  /**
+   * Register new user
+   * @param {Object} userData - { email, password, fullName, role, ... }
+   * @returns {Object} - { success: boolean, user?, error? }
+   */
   const register = async (userData) => {
     try {
       const response = await api.post('/auth/register', userData);
       const { access_token, user } = response.data;
 
-      // Save to localStorage
+      // Set token and user synchronously
+      setToken(access_token);
+      setCurrentUser(user);
       localStorage.setItem('access_token', access_token);
       localStorage.setItem('currentUser', JSON.stringify(user));
 
-      setCurrentUser(user);
+      console.log('✅ Registration successful:', user.email);
       return { success: true, user };
     } catch (error) {
+      console.error('❌ Registration failed:', error.response?.data?.message || error.message);
       return {
         success: false,
         error: error.response?.data?.message || 'Registration failed'
@@ -97,19 +112,61 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Logout user and clear all auth state
+   */
   const logout = () => {
+    console.log('🚪 Logging out:', currentUser?.email);
+    
+    // Clear state
+    setCurrentUser(null);
+    setToken(null);
+    
+    // Clear localStorage
     localStorage.removeItem('access_token');
     localStorage.removeItem('currentUser');
-    setCurrentUser(null);
+    
+    // Axios headers are cleared by useEffect when token is null
   };
 
+  /**
+   * Update user profile data
+   * @param {Object} userData - Updated user fields
+   */
+  const updateProfile = async (userData) => {
+    try {
+      const response = await api.put('/auth/profile', userData);
+      const updatedUser = response.data;
+      
+      setCurrentUser(updatedUser);
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      
+      console.log('✅ Profile updated');
+      return { success: true, user: updatedUser };
+    } catch (error) {
+      console.error('❌ Profile update failed:', error.response?.data?.message || error.message);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Profile update failed'
+      };
+    }
+  };
+
+  // Context value
   const value = {
+    // State
     currentUser,
-    isAuthenticated: !!currentUser,
+    token,
     loading,
+    
+    // Computed
+    isAuthenticated: !!currentUser && !!token,
+    
+    // Methods
     login,
     register,
-    logout
+    logout,
+    updateProfile,
   };
 
   return (

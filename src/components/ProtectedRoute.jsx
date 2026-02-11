@@ -32,12 +32,17 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Extract user role with fallback for nested structure
+  // Extract user role with fallback for nested structure and array format
   let userRole = currentUser?.role;
   
   // Handle nested object structure (e.g., currentUser.user.role)
   if (!userRole && currentUser?.user?.role) {
     userRole = currentUser.user.role;
+  }
+  
+  // Handle array format (e.g., currentUser[0]?.role)
+  if (!userRole && Array.isArray(currentUser) && currentUser.length > 0) {
+    userRole = currentUser[0]?.role;
   }
 
   // Make role check case-insensitive
@@ -51,10 +56,31 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     isAllowed: allowedRolesLower?.includes(userRoleLower)
   });
 
+  // Auto-redirect to correct dashboard based on role
+  // If a farmer tries to access /dashboard (buyer dashboard), redirect to /farmer-dashboard
+  if (location.pathname === '/dashboard' && userRoleLower === 'farmer') {
+    console.log('🔄 Farmer trying to access buyer dashboard, redirecting to /farmer-dashboard');
+    return <Navigate to="/farmer-dashboard" replace />;
+  }
+
+  // If a buyer tries to access /farmer-dashboard, redirect to /dashboard
+  if (location.pathname.startsWith('/farmer-dashboard') && userRoleLower === 'buyer') {
+    console.log('🔄 Buyer trying to access farmer dashboard, redirecting to /dashboard');
+    return <Navigate to="/dashboard" replace />;
+  }
+
   // Condition C: Wrong Role - Check case-insensitively
-  if (allowedRolesLower && userRoleLower && !allowedRolesLower.includes(userRoleLower)) {
-    console.log('❌ Wrong role, redirecting to /unauthorized');
-    return <Navigate to="/unauthorized" replace />;
+  if (allowedRolesLower && allowedRolesLower.length > 0) {
+    // If userRole is missing or undefined, redirect to unauthorized
+    if (!userRoleLower) {
+      console.log('❌ No user role found, redirecting to /unauthorized');
+      return <Navigate to="/unauthorized" replace />;
+    }
+    // Check if user's role is in the allowed roles
+    if (!allowedRolesLower.includes(userRoleLower)) {
+      console.log('❌ Wrong role, redirecting to /unauthorized');
+      return <Navigate to="/unauthorized" replace />;
+    }
   }
 
   // Condition D: Success - Render the protected content

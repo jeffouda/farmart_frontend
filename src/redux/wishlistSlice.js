@@ -28,10 +28,22 @@ export const addToWishlist = createAsyncThunk(
 
 export const removeFromWishlist = createAsyncThunk(
   'wishlist/removeFromWishlist',
-  async (itemId, { rejectWithValue }) => {
+  async (animalId, { getState, rejectWithValue }) => {
     try {
-      await api.delete(`/wishlist/${itemId}`);
-      return itemId;
+      // Get current state to find the wishlist item's id by animal_id
+      const state = getState();
+      const wishlistItem = state.wishlist.items.find(
+        item => String(item.animal?.id) === String(animalId) || String(item.animal_id) === String(animalId)
+      );
+      
+      if (!wishlistItem) {
+        return rejectWithValue('Item not found in wishlist');
+      }
+      
+      // Delete using the wishlist item's id
+      await api.delete(`/wishlist/${wishlistItem.id}`);
+      // Return animal_id for filtering
+      return animalId;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to remove from wishlist');
     }
@@ -55,17 +67,17 @@ const wishlistSlice = createSlice({
     },
     // Optimistic update for instant UI feedback
     optimisticAddToWishlist(state, action) {
-      const animalId = action.payload;
-      const exists = state.items.some(item => item.animal?.id === animalId || item.animal_id === animalId);
+      const animalId = String(action.payload);
+      const exists = state.items.some(item => String(item.animal?.id) === animalId || String(item.animal_id) === animalId);
       if (!exists) {
         state.items.push({ animal: { id: animalId }, id: `temp-${Date.now()}` });
       }
     },
     // Optimistic remove from wishlist
     optimisticRemoveFromWishlist(state, action) {
-      const animalId = action.payload;
+      const animalId = String(action.payload);
       state.items = state.items.filter(
-        item => item.animal?.id !== animalId && item.animal_id !== animalId
+        item => String(item.animal?.id) !== animalId && String(item.animal_id) !== animalId
       );
     },
   },
@@ -87,17 +99,20 @@ const wishlistSlice = createSlice({
       // Add to wishlist
       .addCase(addToWishlist.fulfilled, (state, action) => {
         const newItem = action.payload;
+        const newItemAnimalId = String(newItem.animal?.id || newItem.animal_id);
         const exists = state.items.some(item => 
-          item.animal?.id === newItem.animal?.id || item.animal_id === newItem.animal_id
+          String(item.animal?.id) === newItemAnimalId || String(item.animal_id) === newItemAnimalId
         );
         if (!exists) {
           state.items.push(newItem);
         }
       })
-      // Remove from wishlist
+      // Remove from wishlist - filter by animal_id
       .addCase(removeFromWishlist.fulfilled, (state, action) => {
-        const itemId = action.payload;
-        state.items = state.items.filter(item => item.id !== itemId);
+        const animalId = String(action.payload);
+        state.items = state.items.filter(
+          item => String(item.animal?.id) !== animalId && String(item.animal_id) !== animalId
+        );
       });
   },
 });
@@ -106,8 +121,9 @@ export const { clearWishlist, optimisticAddToWishlist, optimisticRemoveFromWishl
 
 // Selector to check if an animal is in wishlist
 export const selectIsInWishlist = (state, animalId) => {
+  const searchId = String(animalId);
   return state.wishlist.items.some(item => 
-    item.animal?.id === animalId || item.animal_id === animalId
+    String(item.animal?.id) === searchId || String(item.animal_id) === searchId
   );
 };
 
