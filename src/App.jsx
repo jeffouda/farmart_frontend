@@ -14,8 +14,7 @@ import MainLayout from "./layouts/MainLayout";
 import Home from "./pages/Home";
 import SignUp from "./pages/SignUp";
 import BrowseLivestock from "./pages/BrowseLivestock";
-import Marketplace from "./pages/Marketplace";
-import LivestockDetail from "./pages/LivestockDetail";
+import LivestockDetails from "./pages/LivestockDetails";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
@@ -23,13 +22,21 @@ import Wishlist from "./pages/Wishlist";
 import Unauthorized from "./pages/Unauthorized";
 import NegotiationList from "./pages/NegotiationList";
 import NegotiationRoom from "./pages/NegotiationRoom";
+import Negotiation from "./pages/Negotiation";
 import RaiseDispute from "./pages/RaiseDispute";
+import Support from "./pages/Support";
+
+import BuyerDisputes from "./pages/BuyerDisputes";
+import BuyerNegotiationList from "./pages/BuyerNegotiationList";
+import BuyerNegotiationRoom from "./pages/BuyerNegotiationRoom";
 
 // Buyer Dashboard Components
 import BuyerDashboard from "./pages/BuyerDashboard";
 import BuyerOverview from "./pages/BuyerOverview";
 import BuyerWishlist from "./pages/BuyerWishlist";
+import BuyerOrders from "./pages/BuyerOrders";
 import BuyerSettings from "./pages/BuyerSettings";
+import BuyerProfile from "./pages/BuyerProfile";
 
 // Farmer Dashboard Components
 import FarmerDashboard from "./pages/FarmerDashboard";
@@ -40,6 +47,7 @@ import FarmerAnalytics from "./pages/FarmerAnalytics";
 import FarmerDisputes from "./pages/FarmerDisputes";
 import FarmerRaiseDispute from "./pages/FarmerRaiseDispute";
 import AddLivestock from "./pages/AddLivestock";
+import FarmerProfile from "./pages/FarmerProfile";
 
 // Admin Dashboard Components
 import AdminLayout from "./pages/AdminLayout";
@@ -82,8 +90,7 @@ function App() {
           <Route path="/auth" element={<SignUp />} />
           <Route path="/login" element={<SignUp />} />
           <Route path="/browse" element={<BrowseLivestock />} />
-          <Route path="/marketplace" element={<Marketplace />} />
-          <Route path="/livestock/:id" element={<LivestockDetail />} />
+          <Route path="/livestock/:id" element={<LivestockDetails />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/checkout/:orderId" element={<Checkout />} />
@@ -92,8 +99,10 @@ function App() {
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="/negotiations" element={<NegotiationList />} />
           <Route path="/negotiations/:id" element={<NegotiationRoom />} />
+          <Route path="/negotiation/:livestockId/:receiverId" element={<Negotiation />} />
           <Route path="/dispute/:orderId" element={<RaiseDispute />} />
           <Route path="/dispute/new" element={<RaiseDispute />} />
+          <Route path="/support" element={<Support />} />
         </Route>
 
         {/*Protected Buyer Routes */}
@@ -105,9 +114,14 @@ function App() {
             </ProtectedRoute>
           }>
           <Route index element={<BuyerOverview />} />
-          <Route path="orders" element={<Orders />} />
+          <Route path="orders" element={<BuyerOrders />} />
+          <Route path="disputes" element={<BuyerDisputes />} />
+          <Route path="dispute/:orderId" element={<RaiseDispute />} />
           <Route path="wishlist" element={<BuyerWishlist />} />
           <Route path="settings" element={<BuyerSettings />} />
+          <Route path="profile" element={<BuyerProfile />} />
+          <Route path="negotiations" element={<BuyerNegotiationList />} />
+          <Route path="negotiations/:id" element={<BuyerNegotiationRoom />} />
         </Route>
 
         {/* Protected Farmer Routes */}
@@ -125,6 +139,7 @@ function App() {
           <Route path="disputes" element={<FarmerDisputes />} />
           <Route path="disputes/new" element={<FarmerRaiseDispute />} />
           <Route path="add" element={<AddLivestock />} />
+          <Route path="profile" element={<FarmerProfile />} />
         </Route>
 
         {/* Farmer Report Buyer Route */}

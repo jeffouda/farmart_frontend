@@ -11,6 +11,7 @@ import {
   X,
   LogOut,
   MessageCircle,
+  Scale,
 } from "lucide-react";
 
 const DashboardSidebar = () => {
@@ -29,6 +30,7 @@ const DashboardSidebar = () => {
     { name: "Negotiations", path: "/negotiations", icon: MessageCircle },
     { name: "Order", path: "/farmer-dashboard/orders", icon: ShoppingBag },
     { name: "Analytic", path: "/farmer-dashboard/analytics", icon: BarChart3 },
+    { name: "Disputes", path: "/farmer-dashboard/disputes", icon: Scale },
   ];
 
   return (

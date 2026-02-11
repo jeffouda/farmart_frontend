@@ -68,7 +68,7 @@ function Header() {
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white to-transparent" />
       </div>
 
-            {/* ABOUT SECTION */}
+       {/* ABOUT SECTION */}
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}

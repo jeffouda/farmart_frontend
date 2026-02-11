@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   X,
+  Scale,
 } from "lucide-react";
 
 const FarmerDashboard = () => {
@@ -28,6 +29,7 @@ const FarmerDashboard = () => {
     { name: "Dashboard", path: "/farmer-dashboard", icon: LayoutGrid },
     { name: "Inventory", path: "/farmer-dashboard/inventory", icon: Box },
     { name: "Order", path: "/farmer-dashboard/orders", icon: ShoppingBag },
+    { name: "Disputes", path: "/farmer-dashboard/disputes", icon: Scale },
     { name: "Analytic", path: "/farmer-dashboard/analytics", icon: BarChart3 },
   ];
 

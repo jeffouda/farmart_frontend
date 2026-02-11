@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ShieldAlert, UploadCloud, CheckCircle, 
-  ArrowLeft, X, FileText, AlertCircle, Loader2
+  ArrowLeft, X, FileText, AlertCircle, Loader2, User
 } from 'lucide-react';
 import api from '../api/axios';
 import { toast } from 'react-hot-toast';
@@ -57,7 +57,14 @@ const RaiseDispute = () => {
           setOrderDetails(res.data);
         } catch (err) {
           console.error('Failed to fetch order:', err);
-          toast.error('Could not load order details');
+          // Try with /api prefix
+          try {
+            const res2 = await api.get('/api/orders/' + orderId);
+            setOrderDetails(res2.data);
+          } catch (err2) {
+            console.error('Failed to fetch order (retry):', err2);
+            toast.error('Could not load order details');
+          }
         } finally {
           setLoading(false);
         }
@@ -110,8 +117,8 @@ const RaiseDispute = () => {
       return;
     }
 
-    if (description.length < 20) {
-      toast.error('Description must be at least 20 characters');
+    if (description.length < 10) {
+      toast.error('Description must be at least 10 characters');
       return;
     }
 
@@ -187,6 +194,12 @@ const RaiseDispute = () => {
               View My Orders
             </button>
             <button
+              onClick={() => navigate('/dashboard/disputes')}
+              className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              View My Disputes
+            </button>
+            <button
               onClick={() => navigate('/dashboard')}
               className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
             >
@@ -234,7 +247,7 @@ const RaiseDispute = () => {
         {/* Order Details Card */}
         {orderDetails ? (
           <div className="bg-white rounded-xl p-4 mb-6 border border-gray-200">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm text-gray-500">Reporting Issue With</p>
                 <p className="font-semibold text-gray-800">Order #{orderDetails.id}</p>
@@ -242,6 +255,13 @@ const RaiseDispute = () => {
                   <p className="text-sm text-gray-600 mt-1">
                     {orderDetails.items[0].name || 'Livestock Item'}
                   </p>
+                )}
+                {/* Farmer Info */}
+                {(orderDetails.farmer_name || orderDetails.farmer) && (
+                  <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
+                    <User className="w-4 h-4" />
+                    <span>Seller: {orderDetails.farmer_name || orderDetails.farmer}</span>
+                  </div>
                 )}
               </div>
               <div className="text-right">
@@ -311,7 +331,7 @@ const RaiseDispute = () => {
             <label className="block text-sm font-semibold text-gray-700 mb-3">
               Describe what happened <span className="text-red-500">*</span>
               <span className="text-gray-400 font-normal ml-2">
-                ({description.length}/500, min 20)
+                ({description.length}/500, min 10)
               </span>
             </label>
             <div className="relative">
@@ -324,9 +344,9 @@ const RaiseDispute = () => {
               />
               <FileText className="absolute top-3 right-3 w-5 h-5 text-gray-400" />
             </div>
-            {description.length > 0 && description.length < 20 && (
+            {description.length > 0 && description.length < 10 && (
               <p className="text-red-500 text-sm mt-2">
-                Please provide at least 20 characters
+                Please provide at least 10 characters
               </p>
             )}
           </div>
@@ -414,7 +434,7 @@ const RaiseDispute = () => {
           <div className="pt-4 border-t border-gray-100">
             <button
               type="submit"
-              disabled={submitting || !reason || description.length < 20 || !resolution}
+              disabled={submitting || !reason || description.length < 10 || !resolution}
               className="w-full py-4 bg-red-600 text-white rounded-xl font-semibold text-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {submitting ? (

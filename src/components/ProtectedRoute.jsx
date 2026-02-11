@@ -57,6 +57,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   });
 
   // Auto-redirect to correct dashboard based on role
+  // If an admin tries to access any user dashboard, redirect to /admin
+  if ((location.pathname === '/dashboard' || location.pathname.startsWith('/farmer-dashboard')) && userRoleLower === 'admin') {
+    console.log('🔄 Admin trying to access user dashboard, redirecting to /admin');
+    return <Navigate to="/admin" replace />;
+  }
+
   // If a farmer tries to access /dashboard (buyer dashboard), redirect to /farmer-dashboard
   if (location.pathname === '/dashboard' && userRoleLower === 'farmer') {
     console.log('🔄 Farmer trying to access buyer dashboard, redirecting to /farmer-dashboard');
