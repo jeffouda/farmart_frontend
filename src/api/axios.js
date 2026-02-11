@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  // This now points to your permanent static ngrok domain
+  // permanent static ngrok domain
   baseURL: "https://aglisten-armida-confarreate.ngrok-free.dev/api",
   withCredentials: true,
   headers: {
