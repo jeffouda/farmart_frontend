@@ -141,7 +141,7 @@ const Orders = () => {
             }
           </p>
           <Link
-            to={isInDashboard ? '/dashboard' : '/marketplace'}
+            to={isInDashboard ? '/dashboard' : '/browse'}
             className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors">
             <ArrowLeft size={20} />
             {isInDashboard ? 'Back to Dashboard' : 'Browse Marketplace'}
@@ -258,10 +258,10 @@ const Orders = () => {
                     <span className="hidden sm:inline">Confirm</span>
                   </button>
                   
-                  {/* Report Issue Button - Only show for shipped, delivered, or cancelled orders */}
-                  {(order.status?.toLowerCase() && ['shipped', 'delivered', 'cancelled', 'accepted', 'paid'].includes(order.status.toLowerCase())) && (
+                  {/* Report Issue Button - Show for all non-pending orders */}
+                  {order.status && !['pending', 'payment_pending', 'payment_failed'].includes(order.status.toLowerCase()) && (
                     <Link
-                      to={'/dispute/' + order.id}
+                      to={isInDashboard ? '/dashboard/dispute/' + order.id : '/dispute/' + order.id}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
                       title="Report an issue with this order"
                     >

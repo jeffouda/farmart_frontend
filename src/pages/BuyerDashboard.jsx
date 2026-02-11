@@ -9,6 +9,7 @@ import {
   LogOut,
   ChevronRight,
   MessageCircle,
+  Scale,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -17,7 +18,8 @@ import Footer from '../components/Footer';
 const SIDEBAR_LINKS = [
   { icon: User, label: 'Overview', path: '/dashboard' },
   { icon: Package, label: 'My Orders', path: '/dashboard/orders' },
-  { icon: MessageCircle, label: 'Negotiations', path: '/negotiations' },
+  { icon: MessageCircle, label: 'Negotiations', path: '/dashboard/negotiations' },
+  { icon: Scale, label: 'Disputes', path: '/dashboard/disputes' },
   { icon: Heart, label: 'Wishlist', path: '/dashboard/wishlist' },
   { icon: Settings, label: 'Settings', path: '/dashboard/settings' },
 ];
@@ -61,7 +63,7 @@ function BuyerDashboard() {
       <Navbar />
 
       {/* Dashboard Container - Centered with max-width */}
-      <div className="max-w-7xl mx-auto flex pt-16 min-h-[calc(100vh-4rem)]">
+      <div className="max-w-7xl mx-auto flex pt-20 mt-4 min-h-[calc(100vh-6rem)]">
         {/* Left Sidebar - Sticky below Navbar */}
         <aside className="w-64 flex-shrink-0 hidden md:block border-r border-gray-200 bg-white sticky top-16 h-[calc(100vh-4rem)]">
           <div className="flex flex-col h-full">
@@ -100,13 +102,15 @@ function BuyerDashboard() {
                 ))}
               </ul>
 
-              {/* Log Out Button */}
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 mt-4 rounded-xl text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all">
-                <LogOut size={18} />
-                Log Out
-              </button>
+              {/* Log Out Button - Prominent at bottom */}
+              <div className="mt-auto pt-4 border-t border-gray-200">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-all">
+                  <LogOut size={18} />
+                  Log Out
+                </button>
+              </div>
             </nav>
           </div>
         </aside>

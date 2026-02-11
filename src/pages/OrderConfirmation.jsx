@@ -173,7 +173,7 @@ const OrderConfirmation = () => {
             View All Orders
           </Link>
           <Link
-            to="/marketplace"
+            to="/browse"
             className="flex-1 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
           >
             <ShoppingCart size={20} />

@@ -17,80 +17,13 @@ import {
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
-// Mock Data
-const mockDisputes = [
-  {
-    id: 1,
-    orderId: "ORD-1234",
-    orderAmount: 45000,
-    orderDate: "2024-01-15",
-    itemDetails: "2 Cows - Friesian Breed",
-    buyer: {
-      id: 101,
-      name: "Alice Johnson",
-      complaint: "The cows arrived in poor health condition. One cow has visible signs of disease and cannot be used for breeding as promised.",
-      evidenceImage: null,
-    },
-    farmer: {
-      id: 201,
-      name: "John Kamau",
-      defense: "The cows were healthy when they left my farm. The stress of transportation can cause temporary symptoms. I have veterinary certificates proving their health at departure.",
-    },
-    reason: "Quality Issue",
-    status: "open",
-    createdAt: "2024-01-16",
-  },
-  {
-    id: 2,
-    orderId: "ORD-1235",
-    orderAmount: 28000,
-    orderDate: "2024-01-18",
-    itemDetails: "5 Goats - Boer Breed",
-    buyer: {
-      id: 102,
-      name: "Bob Smith",
-      complaint: "The goats are much smaller than described in the listing. The photos showed adult goats but I received young kids.",
-      evidenceImage: "https://via.placeholder.com/400x300?text=Goat+Photo",
-    },
-    farmer: {
-      id: 202,
-      name: "Sarah Wanjiku",
-      defense: "The size difference is normal for goats. All goats are within the expected weight range for their age. The listing clearly states the age of each goat.",
-    },
-    reason: "Misrepresentation",
-    status: "open",
-    createdAt: "2024-01-19",
-  },
-  {
-    id: 3,
-    orderId: "ORD-1236",
-    orderAmount: 120000,
-    orderDate: "2024-01-10",
-    itemDetails: "1 Bull - Aberdeen Angus",
-    buyer: {
-      id: 103,
-      name: "Carol Williams",
-      complaint: "The bull has aggressive behavior issues. It attacked one of my workers on the first day. I want a full refund.",
-      evidenceImage: null,
-    },
-    farmer: {
-      id: 203,
-      name: "Mike Ochieng",
-      defense: "The bull was calm during my ownership. Any behavioral issues could be due to the new environment and need for proper handling.",
-    },
-    reason: "Behavioral Issue",
-    status: "resolved",
-    resolution: "refund_buyer",
-    createdAt: "2024-01-12",
-  },
-];
-
 // Status Badge
 const StatusBadge = ({ status }) => {
   const styles = {
     open: "bg-red-500/20 text-red-400 border-red-500/30",
     pending: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     resolved: "bg-green-500/20 text-green-400 border-green-500/30",
+    dismissed: "bg-slate-500/20 text-slate-400 border-slate-500/30",
   };
 
   return (
@@ -128,8 +61,8 @@ const EvidenceModal = ({ image, onClose }) => {
 
 // Resolution Modal
 const ResolutionModal = ({ dispute, onResolve, onClose, resolving }) => {
-  const [decision, setDecision] = useState(null);
-  const [notes, setNotes] = useState("");
+  const [decision, setDecision] = useState(dispute.admin_decision || null);
+  const [notes, setNotes] = useState(dispute.admin_notes || "");
 
   const handleSubmit = () => {
     if (!decision) {
@@ -150,14 +83,14 @@ const ResolutionModal = ({ dispute, onResolve, onClose, resolving }) => {
             </div>
             <h3 className="text-lg font-semibold text-white mb-2">Already Resolved</h3>
             <p className="text-slate-400">
-              This dispute was resolved on {dispute.resolvedAt || dispute.createdAt}
+              This dispute was resolved
             </p>
             <div className="mt-4 p-3 bg-slate-700 rounded-lg">
               <p className="text-sm text-slate-400">Decision</p>
               <p className="text-white font-medium">
-                {dispute.resolution === "refund_buyer"
+                {dispute.admin_decision === "refund_buyer"
                   ? "Refund Buyer"
-                  : dispute.resolution === "release_farmer"
+                  : dispute.admin_decision === "release_farmer"
                   ? "Release to Farmer"
                   : "Dismissed"}
               </p>
@@ -182,7 +115,7 @@ const ResolutionModal = ({ dispute, onResolve, onClose, resolving }) => {
         <div className="flex items-center justify-between p-4 border-b border-slate-700">
           <div>
             <h3 className="text-lg font-semibold text-white">
-              Case #{dispute.orderId} - Resolve Dispute
+              Case #{dispute.ticket_id} - Resolve Dispute
             </h3>
             <p className="text-slate-400 text-sm">
               Review evidence and make a decision
@@ -203,16 +136,16 @@ const ResolutionModal = ({ dispute, onResolve, onClose, resolving }) => {
             <div>
               <p className="text-slate-400 text-xs">Order Amount</p>
               <p className="text-white font-bold text-lg">
-                KES {dispute.orderAmount.toLocaleString()}
+                KES {dispute.order_amount?.toLocaleString() || "N/A"}
               </p>
             </div>
             <div>
               <p className="text-slate-400 text-xs">Order Date</p>
-              <p className="text-white font-medium">{dispute.orderDate}</p>
+              <p className="text-white font-medium">{dispute.order_date || "N/A"}</p>
             </div>
             <div>
               <p className="text-slate-400 text-xs">Item</p>
-              <p className="text-white font-medium">{dispute.itemDetails}</p>
+              <p className="text-white font-medium">{dispute.item_details || "Unknown"}</p>
             </div>
           </div>
 
@@ -227,41 +160,70 @@ const ResolutionModal = ({ dispute, onResolve, onClose, resolving }) => {
               <div className="space-y-3">
                 <div>
                   <p className="text-slate-400 text-xs">Complainant</p>
-                  <p className="text-white">{dispute.buyer.name}</p>
+                  <p className="text-white">{dispute.filer?.name || "Unknown"}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-xs">Reason</p>
+                  <p className="text-white font-medium">{dispute.reason}</p>
                 </div>
                 <div>
                   <p className="text-slate-400 text-xs">Complaint</p>
-                  <p className="text-slate-200 text-sm">{dispute.buyer.complaint}</p>
+                  <p className="text-slate-200 text-sm">{dispute.description}</p>
                 </div>
-                {dispute.buyer.evidenceImage && (
-                  <div>
-                    <p className="text-slate-400 text-xs mb-2">Evidence</p>
-                    <img
-                      src={dispute.buyer.evidenceImage}
-                      alt="Buyer evidence"
-                      className="w-full h-40 object-cover rounded-lg cursor-pointer hover:opacity-90"
-                      onClick={() => window.open(dispute.buyer.evidenceImage, "_blank")}
-                    />
-                  </div>
-                )}
+                <div>
+                  <p className="text-slate-400 text-xs">Resolution Requested</p>
+                  <p className="text-white capitalize">{dispute.resolution || "None"}</p>
+                </div>
               </div>
             </div>
 
             {/* Farmer Side */}
-            <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+            <div className={`bg-green-500/10 border rounded-xl p-4 ${
+              dispute.farmer_response ? 'border-green-500/30' : 'border-green-500/20'
+            }`}>
               <div className="flex items-center gap-2 mb-3">
                 <Sprout size={18} className="text-green-400" />
-                <h4 className="font-semibold text-white">Farmer's Defense</h4>
+                <h4 className="font-semibold text-white">Respondent (Farmer)</h4>
               </div>
               <div className="space-y-3">
                 <div>
-                  <p className="text-slate-400 text-xs">Respondent</p>
-                  <p className="text-white">{dispute.farmer.name}</p>
+                  <p className="text-slate-400 text-xs">Farmer</p>
+                  <p className="text-white">{dispute.farmer?.name || "Unknown"}</p>
                 </div>
-                <div>
-                  <p className="text-slate-400 text-xs">Defense</p>
-                  <p className="text-slate-200 text-sm">{dispute.farmer.defense}</p>
-                </div>
+                {dispute.farmer_response ? (
+                  <>
+                    <div>
+                      <p className="text-slate-400 text-xs">Defense Response</p>
+                      <p className="text-slate-200 text-sm mt-1">{dispute.farmer_response}</p>
+                    </div>
+                    {dispute.farmer_response_at && (
+                      <div>
+                        <p className="text-slate-400 text-xs">Responded On</p>
+                        <p className="text-slate-300 text-sm">
+                          {new Date(dispute.farmer_response_at).toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                    {dispute.farmer_evidence && (
+                      <div>
+                        <p className="text-slate-400 text-xs">Evidence</p>
+                        <a 
+                          href={dispute.farmer_evidence}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 text-sm hover:text-blue-300 mt-1 inline-flex items-center gap-1"
+                        >
+                          <Image size={14} />
+                          View Uploaded Evidence
+                        </a>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                    <p className="text-yellow-400 text-sm">Waiting for farmer response</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -349,32 +311,32 @@ const DisputeCard = ({ dispute, onClick }) => (
     <div className="flex items-start justify-between mb-3">
       <div>
         <div className="flex items-center gap-2">
-          <span className="text-white font-semibold">Case #{dispute.orderId}</span>
+          <span className="text-white font-semibold">Case #{dispute.ticket_id}</span>
           <StatusBadge status={dispute.status} />
         </div>
-        <p className="text-slate-400 text-sm">{dispute.reason}</p>
+        <p className="text-slate-400 text-sm capitalize">{dispute.reason?.replace(/_/g, " ")}</p>
       </div>
       <ChevronRight size={20} className="text-slate-500" />
     </div>
 
     <div className="grid grid-cols-2 gap-4 text-sm">
       <div>
-        <p className="text-slate-500">Buyer</p>
-        <p className="text-white">{dispute.buyer.name}</p>
+        <p className="text-slate-500">Buyer/Filer</p>
+        <p className="text-white">{dispute.filer?.name || "Unknown"}</p>
       </div>
       <div>
         <p className="text-slate-500">Farmer</p>
-        <p className="text-white">{dispute.farmer.name}</p>
+        <p className="text-white">{dispute.farmer?.name || "Unknown"}</p>
       </div>
       <div>
         <p className="text-slate-500">Amount</p>
         <p className="text-white font-medium">
-          KES {dispute.orderAmount.toLocaleString()}
+          KES {dispute.order_amount?.toLocaleString() || "N/A"}
         </p>
       </div>
       <div>
         <p className="text-slate-500">Filed</p>
-        <p className="text-white">{dispute.createdAt}</p>
+        <p className="text-white">{dispute.created_at?.split("T")[0] || "N/A"}</p>
       </div>
     </div>
   </div>
@@ -388,13 +350,12 @@ const AdminDisputes = () => {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  // Fetch disputes
+  // Fetch disputes from backend
   useEffect(() => {
     const fetchDisputes = async () => {
       try {
-        // For now, use mock data
-        setDisputes(mockDisputes);
-        // In production: const response = await api.get("/admin/disputes");
+        const response = await api.get("/disputes");
+        setDisputes(response.data);
       } catch (error) {
         console.error("Failed to fetch disputes:", error);
         toast.error("Failed to load disputes");
@@ -410,20 +371,20 @@ const AdminDisputes = () => {
   const handleResolve = async (disputeId, data) => {
     setResolving(true);
     try {
-      // In production:
-      // await api.post(`/admin/disputes/${disputeId}/resolve`, data);
-
+      await api.post(`/disputes/${disputeId}/resolve`, data);
+      
       // Update local state
       setDisputes((prev) =>
         prev.map((d) =>
           d.id === disputeId
-            ? { ...d, status: "resolved", resolution: data.decision, resolvedAt: new Date().toISOString() }
+            ? { ...d, status: "resolved", ...data }
             : d
         )
       );
       toast.success("Dispute resolved successfully");
       setSelectedDispute(null);
     } catch (error) {
+      console.error("Failed to resolve dispute:", error);
       toast.error("Failed to resolve dispute");
     } finally {
       setResolving(false);
@@ -434,9 +395,9 @@ const AdminDisputes = () => {
   const filteredDisputes = disputes.filter((dispute) => {
     const matchesFilter = filter === "all" || dispute.status === filter;
     const matchesSearch =
-      dispute.orderId.toLowerCase().includes(search.toLowerCase()) ||
-      dispute.buyer.name.toLowerCase().includes(search.toLowerCase()) ||
-      dispute.farmer.name.toLowerCase().includes(search.toLowerCase());
+      dispute.ticket_id?.toLowerCase().includes(search.toLowerCase()) ||
+      dispute.filer?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      dispute.farmer?.name?.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 

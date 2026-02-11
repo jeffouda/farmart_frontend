@@ -33,7 +33,7 @@ const About = () => {
 
   return (
     <>
-      <section className="py-32 bg-white relative overflow-hidden">
+      <section id="about" className="py-32 bg-white relative overflow-hidden">
         {/* Background Decoration */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(#16a34a15_1px,transparent_1px)] [background-size:40px_40px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-40" />
 
