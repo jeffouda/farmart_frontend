@@ -153,9 +153,7 @@ const Cart = () => {
                 disabled={isCheckingOut || items.length === 0}
                 className="w-full py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label={currentUser ? 'Proceed to checkout' : 'Login to checkout'}>
-                {isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}
               </button>
-
               <Link
                 to="/browse"
                 className="block mt-4 text-center text-sm text-slate-500 hover:text-primary transition-colors">
@@ -170,4 +168,3 @@ const Cart = () => {
 };
 
 export default Cart;
-
