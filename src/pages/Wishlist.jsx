@@ -60,6 +60,21 @@ const Wishlist = () => {
       </div>
     );
   }
+  return (
+    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center gap-4 mb-8">
+          <Link
+            to="/browse"
+            className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors">
+            <ArrowLeft size={20} />
+            <span className="font-medium">Back to Browse</span>
+          </Link>
+          <h1 className="text-2xl font-bold text-slate-900">My Saved Items</h1>
+          <span className="px-3 py-1 bg-slate-200 text-slate-700 rounded-full text-sm font-medium">
+            {wishlistItems.length}
+          </span>
+        </div>
 
 
 
