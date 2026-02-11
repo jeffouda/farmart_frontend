@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { removeFromCart, increaseQuantity, decreaseQuantity } from '../redux/cartSlice';
@@ -15,15 +15,6 @@ const Cart = () => {
 
   const formatPrice = (price) => {
     return `KSh ${price.toLocaleString()}`;
-  };
-
-  const handleCheckout = () => {
-    if (!currentUser) {
-      toast.error('Please login to proceed to checkout');
-      navigate('/login', { state: { from: '/cart' } });
-      return;
-    }
-    navigate('/checkout');
   };
 
   if (items.length === 0) {
@@ -122,7 +113,7 @@ const Cart = () => {
 
           {/* Right Column: Order Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24">
+            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24 transition-shadow hover:shadow-md">
               <h2 className="text-xl font-bold text-slate-900 mb-6">Order Summary</h2>
 
               <div className="space-y-4 mb-6">
@@ -153,6 +144,9 @@ const Cart = () => {
                 disabled={isCheckingOut || items.length === 0}
                 className="w-full py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label={currentUser ? 'Proceed to checkout' : 'Login to checkout'}>
+                <ShoppingBag size={20} />
+                {currentUser ? 'Proceed to Checkout' : 'Login to Checkout'}
+              </button>
 
               <Link
                 to="/browse"
@@ -168,4 +162,3 @@ const Cart = () => {
 };
 
 export default Cart;
-

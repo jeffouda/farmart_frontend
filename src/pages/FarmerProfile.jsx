@@ -159,8 +159,9 @@ function FarmerProfile() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                  <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                   <input
+                    id="full_name"
                     type="text"
                     name="full_name"
                     value={formData.full_name}
@@ -169,8 +170,9 @@ function FarmerProfile() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <input
+                    id="email"
                     type="email"
                     name="email"
                     value={formData.email}
@@ -179,8 +181,9 @@ function FarmerProfile() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                   <input
+                    id="phone"
                     type="tel"
                     name="phone"
                     value={formData.phone}
@@ -189,8 +192,9 @@ function FarmerProfile() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Personal Location</label>
+                  <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">Personal Location</label>
                   <input
+                    id="location"
                     type="text"
                     name="location"
                     value={formData.location}
@@ -374,4 +378,3 @@ function FarmerProfile() {
 }
 
 export default FarmerProfile;
-
