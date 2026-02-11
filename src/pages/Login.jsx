@@ -196,6 +196,8 @@ const Login = () => {
                     onChange={handleChange}
                     placeholder="••••••••"
                     required
+                    autoComplete="current-password"
+                    aria-describedby="password-helper"
                     className="w-full pl-10 pr-12 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   />
                   <button
