@@ -20,5 +20,22 @@ const Wishlist = () => {
   const getAnimalData = (item) => {
     return item.animal || item;
   };
+  const handleMoveToCart = (item) => {
+    const animal = getAnimalData(item);
+    dispatch(addToCart({
+      id: animal.id,
+      name: animal.name || animal.species,
+      price: animal.price,
+      image: animal.image || animal.image_url
+    }));
+    // Optimistic removal for instant UI feedback
+    const animalId = animal.id;
+    dispatch(optimisticRemoveFromWishlist(animalId));
+    // Also call API to remove
+    dispatch(removeFromWishlist(animalId));
+    toast.success(${animal.name || animal.species} moved to cart!);
+  };
+
+
 
 
