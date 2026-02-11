@@ -128,7 +128,7 @@ const Checkout = () => {
 
 const formatPrice = (price) => `KSh ${Number(price).toLocaleString()}`;
 
-const shippingCost = baseTotal > 50000 ? 0 : 1500;
+const shippingCost = baseTotal > 50000 ? 0 : 1;
 const grandTotal = baseTotal + shippingCost;
 
 useEffect(() => {

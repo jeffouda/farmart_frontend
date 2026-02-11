@@ -74,7 +74,7 @@ const LivestockCard = ({ animal, onAddToCart }) => {
       <div className="relative h-48 w-full">
         <Link to={`/livestock/${animal.id}`}>
           <img
-            src={animal.image_url || '/placeholder-livestock.jpg'}
+            src={animal.image_url || 'https://placehold.co/600x400?text=No+Image'}
             alt={animal.breed}
             className="h-48 w-full object-cover"
           />

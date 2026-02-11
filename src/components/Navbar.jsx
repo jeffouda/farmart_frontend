@@ -72,26 +72,6 @@ function Navbar() {
         <div className="flex items-center gap-6 lg:gap-8 ml-auto">
           {/* Desktop Navigation Links - Text-based */}
           <div className="hidden lg:flex items-center gap-6">
-            {/* Browse - Text only for buyers */}
-            {currentUser?.role === 'buyer' && (
-              <Link
-                to="/browse"
-                className={`text-[11px] font-black uppercase tracking-widest transition-all duration-500 drop-shadow-sm ${textColor} ${hoverColor} relative group`}>
-                Browse
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-600 transition-all group-hover:w-full"></span>
-              </Link>
-            )}
-            
-            {/* Buy - Text link to browse for buyers */}
-            {currentUser?.role === 'buyer' && (
-              <Link
-                to="/browse"
-                className={`text-[11px] font-black uppercase tracking-widest transition-all duration-500 drop-shadow-sm ${textColor} ${hoverColor} relative group`}>
-                Buy
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-600 transition-all group-hover:w-full"></span>
-              </Link>
-            )}
-            
             {/* Sell - Only for farmers */}
             {currentUser?.role === 'farmer' && (
               <Link
@@ -102,9 +82,27 @@ function Navbar() {
               </Link>
             )}
             
+            {/* Browse Livestock - Show for everyone */}
+            <Link
+              to="/browse"
+              className={`text-[11px] font-black uppercase tracking-widest transition-all duration-500 drop-shadow-sm ${textColor} ${hoverColor} relative group`}>
+              Browse Livestock
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-600 transition-all group-hover:w-full"></span>
+            </Link>
+
+            {/* Buy - Text link to browse for buyers */}
+            {currentUser?.role === 'buyer' && (
+              <Link
+                to="/browse"
+                className={`text-[11px] font-black uppercase tracking-widest transition-all duration-500 drop-shadow-sm ${textColor} ${hoverColor} relative group`}>
+                Buy
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-600 transition-all group-hover:w-full"></span>
+              </Link>
+            )}
+
             {/* About Us - Show for everyone */}
             <Link
-              to="/about"
+              to="/#about"
               className={`text-[11px] font-black uppercase tracking-widest transition-all duration-500 drop-shadow-sm ${textColor} ${hoverColor} relative group`}>
               About Us
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-600 transition-all group-hover:w-full"></span>
@@ -359,7 +357,7 @@ function Navbar() {
                 to="/browse"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="text-sm font-bold uppercase tracking-widest text-white hover:text-green-500 transition-colors">
-                Browse
+                Browse Livestock
               </Link>
               <Link
                 to="/browse"
@@ -379,8 +377,16 @@ function Navbar() {
             </Link>
           )}
           
+          {/* Browse Livestock - Show for everyone */}
           <Link
-            to="/about"
+            to="/browse"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="text-sm font-bold uppercase tracking-widest text-white hover:text-green-500 transition-colors">
+            Browse Livestock
+          </Link>
+          
+          <Link
+            to="/#about"
             onClick={() => setIsMobileMenuOpen(false)}
             className="text-sm font-bold uppercase tracking-widest text-white hover:text-green-500 transition-colors">
             About Us
