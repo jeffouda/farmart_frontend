@@ -197,8 +197,8 @@ const AdminOrders = () => {
     const fetchOrders = async () => {
       try {
         setLoading(true);
-        console.log("Fetching admin orders from /orders/admin/orders...");
-        const response = await api.get("/orders/admin/orders");
+        console.log("Fetching admin orders from /orders/admin/all...");
+        const response = await api.get("/orders/admin/all");
         console.log("Orders fetched successfully:", response.data);
         setOrders(response.data);
       } catch (error) {

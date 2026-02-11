@@ -14,95 +14,7 @@ import {
   X
 } from "lucide-react";
 import toast from "react-hot-toast";
-
-// Mock Data
-const mockFarmers = [
-  {
-    id: 1,
-    name: "John Kamau",
-    email: "john@farm.com",
-    location: "Nairobi County",
-    status: "pending",
-    rating: 4.5,
-    joinDate: "2024-01-15",
-    livestockCount: 15,
-    verified: false,
-  },
-  {
-    id: 2,
-    name: "Sarah Wanjiku",
-    email: "sarah@farm.com",
-    location: "Kiambu County",
-    status: "active",
-    rating: 4.8,
-    joinDate: "2023-11-20",
-    livestockCount: 28,
-    verified: true,
-  },
-  {
-    id: 3,
-    name: "Mike Ochieng",
-    email: "mike@farm.com",
-    location: "Kisumu County",
-    status: "suspended",
-    rating: 3.2,
-    joinDate: "2023-09-10",
-    livestockCount: 8,
-    verified: true,
-  },
-  {
-    id: 4,
-    name: "Grace Achieng",
-    email: "grace@farm.com",
-    location: "Nakuru County",
-    status: "pending",
-    rating: 0,
-    joinDate: "2024-02-01",
-    livestockCount: 0,
-    verified: false,
-  },
-  {
-    id: 5,
-    name: "Peter Muturi",
-    email: "peter@farm.com",
-    location: "Murang'a County",
-    status: "active",
-    rating: 4.6,
-    joinDate: "2023-08-05",
-    livestockCount: 42,
-    verified: true,
-  },
-];
-
-const mockBuyers = [
-  {
-    id: 101,
-    name: "Alice Johnson",
-    email: "alice@email.com",
-    location: "Westlands, Nairobi",
-    status: "active",
-    totalOrders: 12,
-    joinDate: "2023-12-01",
-  },
-  {
-    id: 102,
-    name: "Bob Smith",
-    email: "bob@email.com",
-    location: "Karen, Nairobi",
-    status: "active",
-    totalOrders: 5,
-    joinDate: "2024-01-10",
-  },
-  {
-    id: 103,
-    name: "Carol Williams",
-    email: "carol@email.com",
-    location: "Mombasa",
-    status: "suspended",
-    totalOrders: 2,
-    joinDate: "2023-06-15",
-  },
-];
+import axios from "../api/axios";
 
 // Status Badge Component
 const StatusBadge = ({ status }) => {
@@ -122,7 +34,7 @@ const StatusBadge = ({ status }) => {
 };
 
 // Action Menu Component
-const ActionMenu = ({ user, onAction }) => {
+const ActionMenu = ({ user, onAction, isFarmer }) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -141,7 +53,7 @@ const ActionMenu = ({ user, onAction }) => {
             onClick={() => setOpen(false)}
           />
           <div className="absolute right-0 mt-1 w-48 bg-slate-800 rounded-lg shadow-lg border border-slate-700 z-20 overflow-hidden">
-            {user.status === "pending" && (
+            {isFarmer && user.status === "pending" && (
               <button
                 onClick={() => {
                   onAction("verify", user);
@@ -163,7 +75,7 @@ const ActionMenu = ({ user, onAction }) => {
               <Eye size={16} />
               View Details
             </button>
-            {user.status !== "suspended" && (
+            {user.status !== "suspended" ? (
               <button
                 onClick={() => {
                   onAction("suspend", user);
@@ -174,6 +86,17 @@ const ActionMenu = ({ user, onAction }) => {
                 <Ban size={16} />
                 {user.status === "pending" ? "Reject" : "Suspend"}
               </button>
+            ) : (
+              <button
+                onClick={() => {
+                  onAction("activate", user);
+                  setOpen(false);
+                }}
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-left text-sm text-green-400 hover:bg-slate-700"
+              >
+                <CheckCircle size={16} />
+                Activate
+              </button>
             )}
           </div>
         </>
@@ -183,7 +106,7 @@ const ActionMenu = ({ user, onAction }) => {
 };
 
 // User Details Modal
-const UserDetailsModal = ({ user, onClose }) => {
+const UserDetailsModal = ({ user, onClose, isFarmer }) => {
   if (!user) return null;
 
   return (
@@ -203,11 +126,11 @@ const UserDetailsModal = ({ user, onClose }) => {
         <div className="p-4 space-y-4">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
-              {user.name.charAt(0)}
+              {user.name ? user.name.charAt(0) : "?"}
             </div>
             <div>
-              <h4 className="text-lg font-semibold text-white">{user.name}</h4>
-              <p className="text-slate-400 text-sm">{user.email}</p>
+              <h4 className="text-lg font-semibold text-white">{user.name || "Unknown"}</h4>
+              <p className="text-slate-400 text-sm">{user.email || "No email"}</p>
             </div>
           </div>
 
@@ -218,7 +141,7 @@ const UserDetailsModal = ({ user, onClose }) => {
             </div>
             <div className="bg-slate-700/50 rounded-lg p-3">
               <p className="text-slate-400 text-xs">Join Date</p>
-              <p className="text-white font-medium">{user.joinDate}</p>
+              <p className="text-white font-medium">{user.joinDate || "Unknown"}</p>
             </div>
           </div>
 
@@ -226,42 +149,44 @@ const UserDetailsModal = ({ user, onClose }) => {
             <p className="text-slate-400 text-xs">Location</p>
             <div className="flex items-center gap-1.5 mt-1">
               <MapPin size={14} className="text-slate-400" />
-              <span className="text-white">{user.location}</span>
+              <span className="text-white">{user.location || "Unknown"}</span>
             </div>
           </div>
 
-          {user.rating !== undefined && (
-            <div className="bg-slate-700/50 rounded-lg p-3">
-              <p className="text-slate-400 text-xs">Rating</p>
-              <div className="flex items-center gap-1.5 mt-1">
-                <Star size={14} className="text-amber-400 fill-amber-400" />
-                <span className="text-white font-medium">
-                  {user.rating > 0 ? user.rating : "No ratings yet"}
-                </span>
+          {isFarmer && (
+            <>
+              <div className="bg-slate-700/50 rounded-lg p-3">
+                <p className="text-slate-400 text-xs">Phone</p>
+                <p className="text-white font-medium">{user.phone_number || "Not provided"}</p>
               </div>
-            </div>
+              <div className="bg-slate-700/50 rounded-lg p-3">
+                <p className="text-slate-400 text-xs">Rating</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Star size={14} className="text-amber-400 fill-amber-400" />
+                  <span className="text-white font-medium">
+                    {user.rating > 0 ? user.rating.toFixed(1) : "No ratings yet"}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-slate-700/50 rounded-lg p-3">
+                <p className="text-slate-400 text-xs">Livestock Listed</p>
+                <p className="text-white font-medium">{user.livestockCount || 0} animals</p>
+              </div>
+            </>
           )}
 
-          {user.livestockCount !== undefined && (
-            <div className="bg-slate-700/50 rounded-lg p-3">
-              <p className="text-slate-400 text-xs">Livestock Listed</p>
-              <p className="text-white font-medium">{user.livestockCount} animals</p>
-            </div>
-          )}
-
-          {user.totalOrders !== undefined && (
+          {!isFarmer && (
             <div className="bg-slate-700/50 rounded-lg p-3">
               <p className="text-slate-400 text-xs">Total Orders</p>
-              <p className="text-white font-medium">{user.totalOrders} orders</p>
+              <p className="text-white font-medium">{user.totalOrders || 0} orders</p>
             </div>
           )}
         </div>
 
         <div className="p-4 border-t border-slate-700 flex gap-3">
-          {user.status === "pending" && (
+          {isFarmer && user.status === "pending" && (
             <button
               onClick={() => {
-                toast.success(`${user.name} has been verified!`);
                 onClose();
               }}
               className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
@@ -287,18 +212,18 @@ const UserTableRow = ({ user, type, onAction }) => (
     <td className="px-4 py-3">
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 bg-slate-700 rounded-full flex items-center justify-center text-white font-medium">
-          {user.name.charAt(0)}
+          {user.name ? user.name.charAt(0) : "?"}
         </div>
         <div>
-          <p className="text-white font-medium">{user.name}</p>
-          <p className="text-slate-400 text-sm">{user.email}</p>
+          <p className="text-white font-medium">{user.name || "Unknown"}</p>
+          <p className="text-slate-400 text-sm">{user.email || "No email"}</p>
         </div>
       </div>
     </td>
     <td className="px-4 py-3">
       <div className="flex items-center gap-1 text-slate-300">
         <MapPin size={14} className="text-slate-500" />
-        {user.location}
+        {user.location || "Unknown"}
       </div>
     </td>
     <td className="px-4 py-3">
@@ -308,20 +233,20 @@ const UserTableRow = ({ user, type, onAction }) => (
       {type === "farmer" ? (
         <div className="flex items-center gap-1 text-amber-400">
           <Star size={14} className="fill-amber-400" />
-          <span className="text-white">{user.rating > 0 ? user.rating : "—"}</span>
+          <span className="text-white">{user.rating > 0 ? user.rating.toFixed(1) : "—"}</span>
         </div>
       ) : (
-        <span className="text-white">{user.totalOrders}</span>
+        <span className="text-white">{user.totalOrders || 0}</span>
       )}
     </td>
     <td className="px-4 py-3">
       <div className="flex items-center gap-1 text-slate-400 text-sm">
         <Calendar size={14} />
-        {user.joinDate}
+        {user.joinDate || "Unknown"}
       </div>
     </td>
     <td className="px-4 py-3">
-      <ActionMenu user={user} onAction={onAction} />
+      <ActionMenu user={user} onAction={onAction} isFarmer={type === "farmer"} />
     </td>
   </tr>
 );
@@ -336,59 +261,127 @@ const AdminUserManagement = () => {
     return "farmers";
   };
   
-  const [activeTab, setActiveTab] = useState(getActiveTabFromPath);
+  const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedUser, setSelectedUser] = useState(null);
+  const [farmers, setFarmers] = useState([]);
+  const [buyers, setBuyers] = useState([]);
+  const [loading, setLoading] = useState(true);
   
   // Update tab when URL changes
   useEffect(() => {
     setActiveTab(getActiveTabFromPath());
   }, [location.pathname]);
   
+  // Fetch users from backend
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        // Fetch farmers
+        const farmersRes = await axios.get("/orders/admin/farmers");
+        setFarmers(farmersRes.data);
+        
+        // Fetch buyers
+        const buyersRes = await axios.get("/orders/admin/buyers");
+        setBuyers(buyersRes.data);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        toast.error("Failed to load users from backend");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUsers();
+  }, []);
+  
   // Handle tab click - navigate to appropriate URL
   const handleTabClick = (tab) => {
     setActiveTab(tab);
     navigate(tab === "buyers" ? "/admin/buyers" : "/admin/farmers");
   };
-
+  
   // Filter users based on search and status
-  const filteredFarmers = mockFarmers.filter((farmer) => {
+  const filteredFarmers = farmers.filter((farmer) => {
     const matchesSearch =
-      farmer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      farmer.email.toLowerCase().includes(searchQuery.toLowerCase());
+      (farmer.name && farmer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (farmer.email && farmer.email.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesStatus = filterStatus === "all" || farmer.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
-
-  const filteredBuyers = mockBuyers.filter((buyer) => {
+  
+  const filteredBuyers = buyers.filter((buyer) => {
     const matchesSearch =
-      buyer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      buyer.email.toLowerCase().includes(searchQuery.toLowerCase());
+      (buyer.name && buyer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (buyer.email && buyer.email.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesStatus = filterStatus === "all" || buyer.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
-
-  // Handle actions
-  const handleAction = (action, user) => {
-    switch (action) {
-      case "verify":
-        toast.success(`${user.name} has been verified successfully!`);
-        break;
-      case "suspend":
-        toast.success(`${user.name} has been ${user.status === "pending" ? "rejected" : "suspended"}`);
-        break;
-      case "view":
-        setSelectedUser(user);
-        break;
-      default:
-        break;
+  
+  // Handle actions (verify, suspend, activate)
+  const handleAction = async (action, user) => {
+    const userId = user.user_id || user.id;
+    let endpoint;
+    
+    // For farmers, use the farmers endpoint for verify
+    if (action === "verify" && activeTab === "farmers") {
+      endpoint = `/orders/admin/farmers/${userId}/verify`;
+    } else {
+      endpoint = `/orders/admin/users/${userId}/${action}`;
+    }
+    
+    try {
+      switch (action) {
+        case "verify":
+          await axios.post(endpoint);
+          toast.success(`${user.name} has been verified successfully!`);
+          // Refresh data
+          const farmersRes = await axios.get("/orders/admin/farmers");
+          setFarmers(farmersRes.data);
+          break;
+        case "suspend":
+          await axios.post(endpoint);
+          toast.success(`${user.name} has been suspended`);
+          // Refresh data
+          if (activeTab === "farmers") {
+            const farmersRes = await axios.get("/orders/admin/farmers");
+            setFarmers(farmersRes.data);
+          } else {
+            const buyersRes = await axios.get("/orders/admin/buyers");
+            setBuyers(buyersRes.data);
+          }
+          break;
+        case "activate":
+          await axios.post(endpoint);
+          toast.success(`${user.name} has been activated`);
+          // Refresh data
+          if (activeTab === "farmers") {
+            const farmersRes = await axios.get("/orders/admin/farmers");
+            setFarmers(farmersRes.data);
+          } else {
+            const buyersRes = await axios.get("/orders/admin/buyers");
+            setBuyers(buyersRes.data);
+          }
+          break;
+        case "view":
+          setSelectedUser(user);
+          break;
+        default:
+          break;
+      }
+    } catch (error) {
+      console.error("Action error:", error);
+      toast.error("Action failed");
     }
   };
-
+  
   // Count pending farmers
-  const pendingCount = mockFarmers.filter((f) => f.status === "pending").length;
-
+  const pendingCount = farmers.filter((f) => f.status === "pending").length;
+  
+  const currentUsers = activeTab === "farmers" ? filteredFarmers : filteredBuyers;
+  
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -400,7 +393,7 @@ const AdminUserManagement = () => {
           </p>
         </div>
       </div>
-
+  
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-800 p-1 rounded-lg w-fit">
         <button
@@ -429,7 +422,7 @@ const AdminUserManagement = () => {
           Buyers
         </button>
       </div>
-
+  
       {/* Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
@@ -462,58 +455,75 @@ const AdminUserManagement = () => {
           </select>
         </div>
       </div>
-
-      {/* Table */}
-      <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-700/50">
-                <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
-                  {activeTab === "farmers" ? "Farmer" : "Buyer"}
-                </th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
-                  Location
-                </th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
-                  Status
-                </th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
-                  {activeTab === "farmers" ? "Rating" : "Orders"}
-                </th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
-                  Join Date
-                </th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {(activeTab === "farmers" ? filteredFarmers : filteredBuyers).map(
-                (user) => (
-                  <UserTableRow
-                    key={user.id}
-                    user={user}
-                    type={activeTab === "farmers" ? "farmer" : "buyer"}
-                    onAction={handleAction}
-                  />
-                )
-              )}
-            </tbody>
-          </table>
+  
+      {/* Loading State */}
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="text-slate-400">Loading users...</p>
         </div>
-
-        {/* Empty State */}
-        {(filteredFarmers.length === 0 || filteredBuyers.length === 0) && (
-          <div className="text-center py-12">
-            <p className="text-slate-400">No users found matching your criteria</p>
+      ) : (
+        /* Table */
+        <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-700/50">
+                  <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
+                    {activeTab === "farmers" ? "Farmer" : "Buyer"}
+                  </th>
+                  <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
+                    Location
+                  </th>
+                  <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
+                    Status
+                  </th>
+                  <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
+                    {activeTab === "farmers" ? "Rating" : "Orders"}
+                  </th>
+                  <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
+                    Join Date
+                  </th>
+                  <th className="text-left px-4 py-3 text-slate-400 font-medium text-sm">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentUsers.length > 0 ? (
+                  currentUsers.map((user) => (
+                    <UserTableRow
+                      key={user.id}
+                      user={user}
+                      type={activeTab === "farmers" ? "farmer" : "buyer"}
+                      onAction={handleAction}
+                    />
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="text-center py-12">
+                      <p className="text-slate-400">No users found</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
-
+  
+          {/* Empty State */}
+          {currentUsers.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <p className="text-slate-400">No users found matching your criteria</p>
+            </div>
+          )}
+        </div>
+      )}
+  
       {/* User Details Modal */}
-      <UserDetailsModal user={selectedUser} onClose={() => setSelectedUser(null)} />
+      <UserDetailsModal 
+        user={selectedUser} 
+        onClose={() => setSelectedUser(null)} 
+        isFarmer={activeTab === "farmers"}
+      />
     </div>
   );
 };

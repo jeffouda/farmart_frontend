@@ -34,6 +34,8 @@ const AddLivestock = () => {
   const [loading, setLoading] = useState(false);
   const [categories] = useState(["Cow", "Goat", "Sheep", "Chicken", "Pig"]);
 
+const [errors, setErrors] = useState({});
+
   // Clean up preview URL on unmount
   useEffect(() => {
     return () => {
@@ -43,6 +45,11 @@ const AddLivestock = () => {
     };
   }, [previewUrl]);
 
+  // Clear error when field is filled
+  const clearError = (fieldName) => {
+    setErrors((prev) => ({ ...prev, [fieldName]: null }));
+  };
+
   // Handle text input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -50,6 +57,7 @@ const AddLivestock = () => {
       ...prev,
       [name]: value,
     }));
+    clearError(name);
   };
 
   // Handle file selection
@@ -69,6 +77,7 @@ const AddLivestock = () => {
       }
 
       setImageFile(file);
+      clearError("image");
 
       // Create preview URL
       const url = URL.createObjectURL(file);
@@ -85,13 +94,34 @@ const AddLivestock = () => {
     setPreviewUrl(null);
   };
 
+  // Validate all fields and return true if valid
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.species) {
+      newErrors.species = "Category is required";
+    }
+    if (!formData.breed) {
+      newErrors.breed = "Breed is required";
+    }
+    if (!formData.price) {
+      newErrors.price = "Price is required";
+    }
+    if (!imageFile) {
+      newErrors.image = "Photo is required";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validate required fields
-    if (!formData.species || !formData.breed || !formData.price || !imageFile) {
-      toast.error("Please fill in all required fields and upload an image");
+    if (!validateForm()) {
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -111,8 +141,8 @@ const AddLivestock = () => {
       data.append("health_history", formData.health_history);
       data.append("image", imageFile);
 
-      // API call
-      await api.post("/livestock/create", data, {
+      // Actual API call
+      const response = await api.post("/livestock/create", data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -154,7 +184,9 @@ const AddLivestock = () => {
                   name="species"
                   value={formData.species}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all ${
+                    errors.species ? "border-red-500" : "border-slate-200"
+                  }`}
                 >
                   <option value="">Select category</option>
                   {categories.map((cat) => (
@@ -177,15 +209,20 @@ const AddLivestock = () => {
                 value={formData.breed}
                 onChange={handleInputChange}
                 placeholder="e.g., Fresian, Boer, Dorper"
-                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all ${
+                  errors.breed ? "border-red-500" : "border-slate-200"
+                }`}
               />
+              {errors.breed && (
+                <p className="text-red-500 text-sm mt-1">{errors.breed}</p>
+              )}
             </div>
 
             {/* Age & Weight Row */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Age <span className="text-red-500">*</span>
+                  Age
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -249,9 +286,14 @@ const AddLivestock = () => {
                   onChange={handleInputChange}
                   placeholder="0"
                   min="0"
-                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all ${
+                    errors.price ? "border-red-500" : "border-slate-200"
+                  }`}
                 />
               </div>
+              {errors.price && (
+                <p className="text-red-500 text-sm mt-1">{errors.price}</p>
+              )}
             </div>
 
             {/* Gender Selection */}
@@ -333,7 +375,11 @@ const AddLivestock = () => {
               <div className="relative">
                 {!previewUrl ? (
                   <label className="block cursor-pointer">
-                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-green-500 hover:bg-green-50 transition-all">
+                    <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+                      errors.image 
+                        ? "border-red-500 bg-red-50" 
+                        : "border-slate-300 hover:border-green-500 hover:bg-green-50"
+                    }`}>
                       <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                         <Upload className="text-green-600" size={32} />
                       </div>
@@ -360,6 +406,7 @@ const AddLivestock = () => {
                         className="w-full h-80 object-cover"
                       />
                     </div>
+                    {/* Remove Button */}
                     <button
                       type="button"
                       onClick={removeImage}
@@ -367,6 +414,7 @@ const AddLivestock = () => {
                     >
                       <X size={18} />
                     </button>
+                    {/* Image Label */}
                     <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
                       <ImageIcon size={16} />
                       <span>{imageFile?.name}</span>
@@ -374,6 +422,9 @@ const AddLivestock = () => {
                   </div>
                 )}
               </div>
+              {errors.image && (
+                <p className="text-red-500 text-sm mt-2 text-center">{errors.image}</p>
+              )}
             </div>
 
             {/* Summary Card */}

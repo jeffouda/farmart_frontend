@@ -1,446 +1,530 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  Upload,
-  X,
-  Image as ImageIcon,
-  DollarSign,
-  Scale,
-  Tag,
-  FileText,
-  CheckCircle,
-} from "lucide-react";
-import api from "../api/axios";
-import toast from "react-hot-toast";
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, Heart, MapPin, Filter, Star, ShoppingCart, Loader2 } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { addToCart } from '../redux/cartSlice';
+import { addToWishlist, removeFromWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
+import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
+import api from '../api/axios';
 
-const AddLivestock = () => {
+const ANIMAL_TYPES = ['Cow', 'Goat', 'Sheep', 'Chicken', 'Pig'];
+const LOCATIONS = [
+  'Nairobi City', 'Kiambu', 'Nakuru', 'Kisumu', 'Eldoret',
+  'Mombasa', 'Narok', 'Kajiado', 'Thika', 'Machakos'
+];
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'price_low', label: 'Price: Low to High' },
+  { value: 'price_high', label: 'Price: High to Low' },
+];
+
+function BrowseLivestock() {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const wishlistItems = useSelector(state => state.wishlist.items);
 
-  // State management
-  const [formData, setFormData] = useState({
-    species: "",
-    breed: "",
-    age: "",
-    ageUnit: "years",
-    weight: "",
-    price: "",
-    description: "",
-    gender: "male",
-    health_history: "",
-  });
+  // State
+  const [livestock, setLivestock] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filtering, setFiltering] = useState(false);
+  const [error, setError] = useState(null);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  const [imageFile, setImageFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [categories] = useState(["Cow", "Goat", "Sheep", "Chicken", "Pig"]);
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+  const [selectedLocation, setSelectedLocation] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
 
-  // Clean up preview URL on unmount
+  // Debounce function
+  const useDebounce = (value, delay) => {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    useEffect(() => {
+      const handler = setTimeout(() => setDebouncedValue(value), delay);
+      return () => clearTimeout(handler);
+    }, [value, delay]);
+    return debouncedValue;
+  };
+
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  const debouncedMinPrice = useDebounce(priceRange.min, 500);
+  const debouncedMaxPrice = useDebounce(priceRange.max, 500);
+
+  // Fetch livestock from API
+  const fetchLivestock = useCallback(async () => {
+    try {
+      setFiltering(true);
+      setError(null);
+
+      // Build query params
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.append('search', debouncedSearch);
+      if (selectedCategories.length > 0) params.append('species', selectedCategories.join(','));
+      if (debouncedMinPrice) params.append('min_price', debouncedMinPrice);
+      if (debouncedMaxPrice) params.append('max_price', debouncedMaxPrice);
+      if (selectedLocation) params.append('location', selectedLocation);
+      params.append('sort', sortBy);
+
+      const response = await api.get(`/livestock?${params.toString()}`);
+      setLivestock(response.data.animals || response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch livestock:', error);
+      setError('Failed to load livestock. Please try again.');
+    } finally {
+      setFiltering(false);
+      setLoading(false);
+    }
+  }, [debouncedSearch, selectedCategories, debouncedMinPrice, debouncedMaxPrice, selectedLocation, sortBy]);
+
+  // Initial load and filter changes
   useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
+    fetchLivestock();
+  }, [fetchLivestock]);
 
-  // Handle text input changes
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  // Check if item is in wishlist
+  const isInWishlist = (id) => {
+    return wishlistItems.some(item =>
+      String(item.animal?.id) === String(id) || String(item.animal_id) === String(id)
+    );
   };
 
-  // Handle file selection
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith("image/")) {
-        toast.error("Please select an image file");
-        return;
-      }
-
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Image must be less than 5MB");
-        return;
-      }
-
-      setImageFile(file);
-
-      // Create preview URL
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
-    }
-  };
-
-  // Remove image
-  const removeImage = () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    setImageFile(null);
-    setPreviewUrl(null);
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Validate required fields
-    if (!formData.species || !formData.breed || !formData.price || !imageFile) {
-      toast.error("Please fill in all required fields and upload an image");
+  // Handle add to cart
+  const handleAddToCart = (e, id) => {
+    e.stopPropagation();
+    if (!currentUser) {
+      toast.error('Please login to add items to cart');
+      navigate('/auth');
       return;
     }
 
-    setLoading(true);
-
-    try {
-      // Create FormData for multipart/form-data
-      const data = new FormData();
-      data.append("species", formData.species);
-      data.append("breed", formData.breed);
-      data.append("age", formData.age);
-      data.append("ageUnit", formData.ageUnit);
-      data.append("weight", formData.weight);
-      data.append("price", formData.price);
-      data.append("description", formData.description);
-      data.append("gender", formData.gender);
-      data.append("health_history", formData.health_history);
-      data.append("image", imageFile);
-
-      // API call
-      await api.post("/livestock/create", data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      toast.success("Livestock listed successfully!");
-      navigate("/farmer-dashboard/inventory");
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error(error.response?.data?.error || "Failed to upload livestock");
-    } finally {
-      setLoading(false);
+    const item = livestock.find(l => String(l.id) === String(id));
+    if (item) {
+      dispatch(addToCart({
+        id: item.id,
+        name: `${item.species} - ${item.breed}`,
+        price: item.price,
+        image: item.image_url || item.image
+      }));
+      toast.success('Added to cart!');
+      navigate('/cart');
     }
   };
 
-  return (
-    <div className="p-4 md:p-6 max-w-6xl mx-auto">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Add New Livestock</h1>
-        <p className="text-slate-500">
-          Fill in the details and add a photo of your animal
-        </p>
+  // Handle toggle wishlist
+  const handleToggleWishlist = (e, id) => {
+    e.stopPropagation();
+    if (!currentUser) {
+      toast.error('Please login to save items');
+      navigate('/auth');
+      return;
+    }
+
+    if (isInWishlist(id)) {
+      dispatch(optimisticRemoveFromWishlist(id));
+      dispatch(removeFromWishlist(id));
+      toast.success('Removed from wishlist');
+    } else {
+      dispatch(addToWishlist(id));
+      toast.success('Added to wishlist!');
+    }
+  };
+
+  // Toggle category checkbox
+  const handleCategoryToggle = (category) => {
+    setSelectedCategories(prev =>
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedCategories([]);
+    setPriceRange({ min: '', max: '' });
+    setSelectedLocation('');
+    setSortBy('newest');
+  };
+
+  // Has active filters
+  const hasActiveFilters = selectedCategories.length > 0 || priceRange.min || priceRange.max || selectedLocation;
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium">Loading livestock...</p>
+        </div>
       </div>
+    );
+  }
 
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* LEFT SIDE: Data Form */}
-          <div className="space-y-6">
-            {/* Category Dropdown */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Category <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <Tag
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  size={18}
-                />
-                <select
-                  name="species"
-                  value={formData.species}
-                  onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
-                >
-                  <option value="">Select category</option>
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 text-red-300 mx-auto mb-4">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <p className="text-red-600 font-medium mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-            {/* Breed Input */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Breed <span className="text-red-500">*</span>
-              </label>
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b sticky top-16 z-40">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">
+              Browse Livestock
+            </h1>
+            <div className="flex-1 max-w-xl relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
               <input
                 type="text"
-                name="breed"
-                value={formData.breed}
-                onChange={handleInputChange}
-                placeholder="e.g., Fresian, Boer, Dorper"
-                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                placeholder="Search livestock..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-slate-100 rounded-xl font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
-
-            {/* Age & Weight Row */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Age <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    name="age"
-                    value={formData.age}
-                    onChange={handleInputChange}
-                    placeholder="0"
-                    min="0"
-                    className="flex-1 px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
-                  />
-                  <select
-                    name="ageUnit"
-                    value={formData.ageUnit}
-                    onChange={handleInputChange}
-                    className="w-24 px-3 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none bg-white"
-                  >
-                    <option value="months">Months</option>
-                    <option value="years">Years</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Weight <span className="text-slate-400">(kg)</span>
-                </label>
-                <div className="relative">
-                  <Scale
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    size={18}
-                  />
-                  <input
-                    type="number"
-                    name="weight"
-                    value={formData.weight}
-                    onChange={handleInputChange}
-                    placeholder="0"
-                    min="0"
-                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Price Input */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Price <span className="text-red-500">*</span>{" "}
-                <span className="text-slate-400">(KES)</span>
-              </label>
-              <div className="relative">
-                <DollarSign
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  size={18}
-                />
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleInputChange}
-                  placeholder="0"
-                  min="0"
-                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Gender Selection */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Gender
-              </label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="gender"
-                    value="male"
-                    checked={formData.gender === "male"}
-                    onChange={handleInputChange}
-                    className="w-4 h-4 text-green-600 focus:ring-green-500"
-                  />
-                  <span className="text-slate-700">Male</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="gender"
-                    value="female"
-                    checked={formData.gender === "female"}
-                    onChange={handleInputChange}
-                    className="w-4 h-4 text-green-600 focus:ring-green-500"
-                  />
-                  <span className="text-slate-700">Female</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Description Textarea */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Describe your animal (appearance, characteristics, etc.)"
-                rows={4}
-                className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all resize-none"
-              />
-            </div>
-
-            {/* Health History */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Health Notes / History
-              </label>
-              <div className="relative">
-                <FileText
-                  className="absolute left-3 top-3 text-slate-400"
-                  size={18}
-                />
-                <textarea
-                  name="health_history"
-                  value={formData.health_history}
-                  onChange={handleInputChange}
-                  placeholder="Vaccinations, illnesses, special care instructions..."
-                  rows={3}
-                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all resize-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT SIDE: Image Preview */}
-          <div className="space-y-6">
-            <div className="bg-slate-50 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">
-                Animal Photo <span className="text-red-500">*</span>
-              </h3>
-
-              {/* Dashed Upload Box */}
-              <div className="relative">
-                {!previewUrl ? (
-                  <label className="block cursor-pointer">
-                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-green-500 hover:bg-green-50 transition-all">
-                      <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                        <Upload className="text-green-600" size={32} />
-                      </div>
-                      <p className="text-lg font-medium text-slate-700 mb-2">
-                        Click to Upload Image
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        PNG, JPG up to 5MB
-                      </p>
-                    </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                  </label>
-                ) : (
-                  <div className="relative">
-                    <div className="rounded-xl overflow-hidden border border-slate-200">
-                      <img
-                        src={previewUrl}
-                        alt="Preview"
-                        className="w-full h-80 object-cover"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={removeImage}
-                      className="absolute -top-3 -right-3 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
-                    >
-                      <X size={18} />
-                    </button>
-                    <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
-                      <ImageIcon size={16} />
-                      <span>{imageFile?.name}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Summary Card */}
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">
-                Summary
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Category</span>
-                  <span className="font-medium text-slate-900">
-                    {formData.species || "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Breed</span>
-                  <span className="font-medium text-slate-900">
-                    {formData.breed || "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Price</span>
-                  <span className="font-bold text-green-600">
-                    KES{" "}
-                    {formData.price
-                      ? parseFloat(formData.price).toLocaleString()
-                      : "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Photo</span>
-                  <span
-                    className={`font-medium ${previewUrl ? "text-green-600" : "text-red-500"}`}
-                  >
-                    {previewUrl ? "Uploaded" : "Required"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Submit Button */}
             <button
-              type="submit"
-              disabled={loading || !previewUrl}
-              className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${
-                loading || !previewUrl
-                  ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                  : "bg-green-600 text-white hover:bg-green-700 active:scale-98"
-              }`}
-            >
-              {loading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <CheckCircle size={24} />
-                  List Livestock
-                </>
-              )}
+              onClick={() => setMobileFiltersOpen(true)}
+              className="lg:hidden flex items-center gap-2 px-4 py-3 bg-slate-100 rounded-xl font-medium text-slate-700">
+              <Filter size={20} />
+              Filters
             </button>
           </div>
         </div>
-      </form>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-8 flex gap-8">
+        {/* Sidebar - Desktop */}
+        <aside className="hidden lg:block w-64 flex-shrink-0">
+          <div className="bg-white rounded-2xl p-6 shadow-sm sticky top-36">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-black text-slate-900 uppercase italic">Filters</h2>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="text-xs font-bold text-green-600 uppercase tracking-wider hover:text-green-500">
+                  Clear All
+                </button>
+              )}
+            </div>
+
+            {/* Category Filter */}
+            <div className="mb-6">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Animal Type</h3>
+              <div className="space-y-2">
+                {ANIMAL_TYPES.map((type) => (
+                  <label key={type} className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={selectedCategories.includes(type)}
+                      onChange={() => handleCategoryToggle(type)}
+                      className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                    />
+                    <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900">{type}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Price Range Filter */}
+            <div className="mb-6">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Price Range</h3>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={priceRange.min}
+                  onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={priceRange.max}
+                  onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            </div>
+
+            {/* Location Filter */}
+            <div className="mb-6">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Location</h3>
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
+              >
+                <option value="">All Locations</option>
+                {LOCATIONS.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sort By */}
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Sort By</h3>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Grid */}
+        <main className="flex-1">
+          <div className="mb-6 flex items-center justify-between">
+            <p className="text-sm font-medium text-slate-500">
+              {filtering ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Updating...
+                </span>
+              ) : (
+                <>
+                  Showing <span className="font-bold text-slate-900">{livestock.length}</span> livestock
+                </>
+              )}
+            </p>
+          </div>
+
+          {/* Empty State */}
+          {livestock.length === 0 && !filtering && (
+            <div className="bg-white rounded-2xl p-12 text-center">
+              <MapPin className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-slate-900 mb-2">No livestock found</h3>
+              <p className="text-slate-500">Try adjusting your filters or search query</p>
+            </div>
+          )}
+
+          {/* Livestock Grid - Big Cards */}
+          {livestock.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {livestock.map((animal) => (
+                <div
+                  key={animal.id}
+                  className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all cursor-pointer group"
+                  onClick={() => navigate(`/livestock/${animal.id}`)}
+                >
+                  {/* Image */}
+                  <div className="relative aspect-[4/3] overflow-hidden">
+                    <img
+                      src={animal.image_url || animal.image || 'https://placehold.co/400x300?text=No+Image'}
+                      alt={animal.breed || 'Livestock'}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    {/* Species Badge - Left */}
+                    {animal.species && (
+                      <div className="absolute bottom-4 left-4 px-3 py-1 bg-green-600 text-white text-xs font-black uppercase tracking-wider rounded-lg">
+                        {animal.species}
+                      </div>
+                    )}
+                    {/* Verified Badge - Left Bottom */}
+                    {animal.is_verified && (
+                      <div className="absolute bottom-4 left-28 px-3 py-1 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-lg">
+                        Verified
+                      </div>
+                    )}
+                    {/* Wishlist Button - Right */}
+                    <button
+                      onClick={(e) => handleToggleWishlist(e, animal.id)}
+                      className={`absolute top-4 right-4 p-4 bg-white/90 backdrop-blur-sm rounded-full transition-colors ${
+                        isInWishlist(animal.id)
+                          ? 'text-red-500'
+                          : 'text-slate-400 hover:text-red-500'
+                      }`}
+                    >
+                      <Heart size={24} fill={isInWishlist(animal.id) ? "currentColor" : "none"} />
+                    </button>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-8">
+                    {/* Title */}
+                    <h3 className="text-lg font-bold text-slate-900 leading-tight mb-3">
+                      {animal.breed || `${animal.species} - Breed`}
+                    </h3>
+
+                    {/* Price */}
+                    <p className="text-3xl font-black text-orange-500 mb-4">
+                      KES {animal.price?.toLocaleString() || '0'}
+                    </p>
+
+                    {/* Details Row */}
+                    <div className="flex items-center gap-4 text-base text-slate-500 mb-6">
+                      {animal.age && <span>{animal.age} years</span>}
+                      {animal.weight && <span>• {animal.weight}kg</span>}
+                      <span>• {animal.gender || 'N/A'}</span>
+                    </div>
+
+                    {/* Location */}
+                    <div className="flex items-center gap-2 text-base text-slate-400 mb-6">
+                      <MapPin size={14} />
+                      <span>{animal.location || 'Unknown Location'}</span>
+                    </div>
+
+                    {/* Farmer Info */}
+                    {animal.farmer_name && (
+                      <div className="flex items-center gap-2 mb-6 pb-6 border-b border-slate-100">
+                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-base font-bold text-green-700">
+                          {(animal.farmer_name || "U").substring(0, 2).toUpperCase()}
+                        </div>
+                        <span className="text-base font-medium text-slate-600">{animal.farmer_name}</span>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-4 mt-2">
+                      <button
+                        onClick={(e) => handleAddToCart(e, animal.id)}
+                        className="flex-1 py-4 bg-green-600 text-white font-black uppercase text-sm tracking-wider rounded-xl hover:bg-green-700 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <ShoppingCart size={16} />
+                        Add to Cart
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/livestock/${animal.id}`);
+                        }}
+                        className="flex-1 py-4 text-center bg-slate-100 text-slate-700 font-black uppercase text-sm tracking-wider rounded-xl hover:bg-slate-200 transition-all active:scale-95">
+                        Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Mobile Filter Drawer */}
+      {mobileFiltersOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileFiltersOpen(false)} />
+          <div className="absolute right-0 top-0 h-full w-80 bg-white p-6 overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-black text-slate-900 uppercase italic">Filters</h2>
+              <button onClick={() => setMobileFiltersOpen(false)} className="p-2 text-slate-400">
+                ✕
+              </button>
+            </div>
+
+            {/* Category */}
+            <div className="mb-6">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Animal Type</h3>
+              <div className="space-y-2">
+                {ANIMAL_TYPES.map((type) => (
+                  <label key={type} className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedCategories.includes(type)}
+                      onChange={() => handleCategoryToggle(type)}
+                      className="w-4 h-4 rounded border-slate-300 text-green-600 cursor-pointer"
+                    />
+                    <span className="text-sm font-medium text-slate-700">{type}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Price */}
+            <div className="mb-6">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Price Range</h3>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={priceRange.min}
+                  onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm"
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={priceRange.max}
+                  onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Location */}
+            <div className="mb-6">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Location</h3>
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm"
+              >
+                <option value="">All Locations</option>
+                {LOCATIONS.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sort */}
+            <div className="mb-6">
+              <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Sort By</h3>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-100 rounded-lg text-sm"
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={clearFilters}
+                className="flex-1 py-4 bg-gray-100 text-slate-700 font-black uppercase text-sm tracking-wider rounded-xl">
+                Clear All
+              </button>
+              <button
+                onClick={() => setMobileFiltersOpen(false)}
+                className="flex-1 py-4 bg-green-600 text-white font-black uppercase text-sm tracking-wider rounded-xl">
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
 
-export default AddLivestock;
+export default BrowseLivestock;
