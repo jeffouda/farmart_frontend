@@ -1,14 +1,14 @@
 import axios from "axios";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"; // only domain, no /api
+
 const api = axios.create({
-  // permanent static ngrok domain
-  baseURL: "https://aglisten-armida-confarreate.ngrok-free.dev/api",
+  baseURL: `${API_URL}/api`, // append /api once
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
     "ngrok-skip-browser-warning": "true",
   },
-  withCredentials: true
 });
 
 api.interceptors.request.use(
