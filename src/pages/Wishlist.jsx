@@ -35,6 +35,15 @@ const Wishlist = () => {
     dispatch(removeFromWishlist(animalId));
     toast.success(${animal.name || animal.species} moved to cart!);
   };
+  const handleRemoveFromWishlist = (item) => {
+    const animal = getAnimalData(item);
+    const animalId = animal.id;
+    // Optimistic removal for instant UI feedback
+    dispatch(optimisticRemoveFromWishlist(animalId));
+    // Also call API to remove
+    dispatch(removeFromWishlist(animalId));
+    toast.success(${animal.name || animal.species} removed from wishlist);
+  };
 
 
 
