@@ -11,9 +11,19 @@ const Cart = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { items, totalAmount } = useSelector(state => state.cart);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const formatPrice = (price) => {
     return `KSh ${price.toLocaleString()}`;
+  };
+
+  const handleCheckout = () => {
+    if (!currentUser) {
+      toast.error('Please login to proceed to checkout');
+      navigate('/login', { state: { from: '/cart' } });
+      return;
+    }
+    navigate('/checkout');
   };
 
   if (items.length === 0) {
@@ -44,7 +54,7 @@ const Cart = () => {
             {items.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-4">
+                className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-4 transition-all hover:shadow-md hover:scale-[1.01]">
                 {/* Product Image */}
                 <div className="w-24 h-24 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
                   {item.image ? (
@@ -73,7 +83,9 @@ const Cart = () => {
                   <div className="flex items-center gap-3 mt-3">
                     <button
                       onClick={() => dispatch(decreaseQuantity(item.id))}
-                      className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                      className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                      aria-label={`Decrease quantity of ${item.name}`}
+                      disabled={item.quantity <= 1}>
                       <Minus size={16} className="text-slate-600" />
                     </button>
                     <span className="w-8 text-center font-medium text-slate-900">
@@ -81,7 +93,8 @@ const Cart = () => {
                     </span>
                     <button
                       onClick={() => dispatch(increaseQuantity(item.id))}
-                      className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                      className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                      aria-label={`Increase quantity of ${item.name}`}>
                       <Plus size={16} className="text-slate-600" />
                     </button>
                   </div>
@@ -93,8 +106,12 @@ const Cart = () => {
                     {formatPrice(item.price * item.quantity)}
                   </p>
                   <button
-                    onClick={() => dispatch(removeFromCart(item.id))}
-                    className="mt-2 text-red-500 hover:text-red-600 transition-colors flex items-center gap-1 ml-auto">
+                    onClick={() => {
+                      dispatch(removeFromCart(item.id));
+                      toast.success(`${item.name} removed from cart`);
+                    }}
+                    className="mt-2 text-red-500 hover:text-red-600 transition-colors flex items-center gap-1 ml-auto"
+                    aria-label={`Remove ${item.name} from cart`}>
                     <Trash2 size={16} />
                     <span className="text-sm">Remove</span>
                   </button>
@@ -124,11 +141,18 @@ const Cart = () => {
               </div>
 
               <button
-                onClick={() => currentUser ? navigate('/checkout') : navigate('/auth')}
-                className="w-full py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
-                <ShoppingBag size={20} />
-                {currentUser ? 'Proceed to Checkout' : 'Login to Checkout'}
-              </button>
+                onClick={() => {
+                  setIsCheckingOut(true);
+                  if (currentUser) {
+                    navigate('/checkout');
+                  } else {
+                    navigate('/login', { state: { from: '/cart' } });
+                  }
+                  setTimeout(() => setIsCheckingOut(false), 1000);
+                }}
+                disabled={isCheckingOut || items.length === 0}
+                className="w-full py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label={currentUser ? 'Proceed to checkout' : 'Login to checkout'}>
 
               <Link
                 to="/browse"
@@ -144,3 +168,4 @@ const Cart = () => {
 };
 
 export default Cart;
+

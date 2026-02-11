@@ -31,11 +31,23 @@ const ConfirmDeliveryModal = ({ order, onClose, onConfirmed }) => {
     );
   };
 
+
+  /**
+   * Step 1: Confirm delivery
+   * UPDATED: Using consistent route /orders/confirm-receipt/${id}
+   */
+
   const handleConfirmDelivery = async () => {
     if (confirming) return;
     setConfirming(true);
     
     try {
+
+      // Ensure the path includes 'payments' if that's your blueprint prefix
+      await api.post(`/payments/confirm-receipt/${order.id}`);
+
+      toast.success("Delivery confirmed! Payment released.");
+
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
       
@@ -43,9 +55,15 @@ const ConfirmDeliveryModal = ({ order, onClose, onConfirmed }) => {
       toast.success('Delivery confirmed successfully!');
       
       if (onConfirmed) onConfirmed();
+
       setStep(2);
     } catch (error) {
+
+      const errorMsg = error.response?.data?.error || "Release failed";
+      toast.error(errorMsg);
+
       toast.error('Failed to confirm delivery. Please try again.');
+
     } finally {
       setConfirming(false);
     }
@@ -72,22 +90,65 @@ const ConfirmDeliveryModal = ({ order, onClose, onConfirmed }) => {
     onClose();
   };
 
+
+  // Success state (Transaction Completed)
+  if (completed) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl w-full max-w-md p-8 text-center shadow-xl border-t-8 border-green-600">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-8 h-8 text-green-600" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Transaction Closed</h2>
+          <p className="text-gray-600 mb-6">
+            You've confirmed delivery and funds have been released to the farmer.
+          </p>
+          <button
+            onClick={onClose}
+            className="w-full py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-lg"
+          >
+            Close Ledger
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-100 rounded-full">
               <PackageCheck className="w-5 h-5 text-green-600" />
             </div>
-            <div>
+            </div>
+
+              {step === 1 ? (
+                <>
+                  <h2 className="text-xl font-bold text-gray-800">Confirm Delivery?</h2>
+                  <p className="text-[10px] text-gray-400 font-mono tracking-tighter">ID: {order?.id}</p>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-xl font-bold text-gray-800">How was your order?</h2>
+                  <p className="text-sm text-gray-500">Rate the livestock received</p>
+                </>
+              )}
+
               <h2 className="text-lg font-semibold text-gray-800">
                 {completed ? 'Review Your Order' : 'Confirm Delivery'}
               </h2>
               <p className="text-sm text-gray-500">
                 {completed ? 'Share your feedback' : 'Step 1 of 2'}
               </p>
+
             </div>
           </div>
           <button 
@@ -106,28 +167,32 @@ const ConfirmDeliveryModal = ({ order, onClose, onConfirmed }) => {
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                 <p className="text-sm text-yellow-800">
                   <strong>Important:</strong> Only confirm if you have received the goods in good condition. 
-                  This action cannot be undone and will release payment to the farmer.
+                  This action triggers an immediate Escrow payout to the seller.
                 </p>
               </div>
 
               <div className="space-y-3">
                 <p className="text-sm font-semibold text-gray-700">Order Summary:</p>
-                <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                <div className="bg-gray-50 rounded-lg p-3 space-y-2 border border-gray-100">
                   {(order?.items || []).map((item, index) => (
                     <div key={index} className="flex justify-between text-sm">
-                      <span className="text-gray-600">{item.name} × {item.quantity}</span>
-                      <span className="font-medium">KSh {(item.price * item.quantity)?.toLocaleString()}</span>
+                      <span className="text-gray-600 font-medium">{item.name || 'Livestock'} × {item.quantity}</span>
+                      <span className="font-bold">KSh {(item.price * item.quantity)?.toLocaleString()}</span>
                     </div>
                   ))}
+                  <div className="border-t border-dashed border-gray-300 pt-2 mt-2 flex justify-between font-bold text-gray-800">
+                    <span>TOTAL</span>
+                    <span>KSh {order?.total_amount?.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
                 <MessageSquare className="w-5 h-5 text-blue-600 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-blue-800">Tip</p>
+                  <p className="text-sm font-medium text-blue-800">Escrow Tip</p>
                   <p className="text-sm text-blue-600 mt-1">
-                    After confirming, you'll be able to leave a review to help other buyers.
+                    Once confirmed, your review helps build the farmer's reputation on the platform.
                   </p>
                 </div>
               </div>
@@ -137,7 +202,6 @@ const ConfirmDeliveryModal = ({ order, onClose, onConfirmed }) => {
           {/* Step 2: Review */}
           {step === 2 && (
             <div className="space-y-6">
-              {/* Star Rating */}
               <div className="text-center">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Tap to rate</p>
                 <div className="flex items-center justify-center gap-2">
@@ -161,17 +225,15 @@ const ConfirmDeliveryModal = ({ order, onClose, onConfirmed }) => {
                     </button>
                   ))}
                 </div>
-                <p className="text-sm text-gray-500 mt-2">
-                  {rating === 0 && 'Not rated'}
-                  {rating === 1 && 'Poor'}
-                  {rating === 2 && 'Fair'}
-                  {rating === 3 && 'Good'}
-                  {rating === 4 && 'Very Good'}
-                  {rating === 5 && 'Excellent'}
+                <p className="text-sm font-bold text-yellow-600 mt-2">
+                  {rating === 1 && 'POOR'}
+                  {rating === 2 && 'FAIR'}
+                  {rating === 3 && 'GOOD'}
+                  {rating === 4 && 'VERY GOOD'}
+                  {rating === 5 && 'EXCELLENT'}
                 </p>
               </div>
 
-              {/* Quick Tags */}
               <div>
                 <p className="text-sm font-semibold text-gray-700 mb-3">What went well?</p>
                 <div className="flex flex-wrap gap-2">
@@ -193,15 +255,14 @@ const ConfirmDeliveryModal = ({ order, onClose, onConfirmed }) => {
                 </div>
               </div>
 
-              {/* Feedback */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Leave a note (optional)
+                  Detailed Feedback (optional)
                 </label>
                 <textarea
                   value={feedback}
                   onChange={(e) => setFeedback(e.target.value)}
-                  placeholder="Tell us more about your experience..."
+                  placeholder="Share details about health, weight, or delivery speed..."
                   rows={3}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
                   disabled={submitting}
@@ -225,17 +286,17 @@ const ConfirmDeliveryModal = ({ order, onClose, onConfirmed }) => {
               <button
                 onClick={handleConfirmDelivery}
                 disabled={confirming}
-                className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2 shadow-md"
               >
                 {confirming ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Confirming...
+                    Releasing...
                   </>
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4" />
-                    Yes, I Received It
+                    Yes, Release Payment
                   </>
                 )}
               </button>
