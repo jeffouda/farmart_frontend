@@ -55,6 +55,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminUserManagement from "./pages/AdminUserManagement";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminDisputes from "./pages/AdminDisputes";
+import Finance from "./pages/admin/Finance";
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -167,7 +168,7 @@ function App() {
           <Route path="buyers" element={<AdminUserManagement />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="disputes" element={<AdminDisputes />} />
-          <Route path="finance" element={<AdminDashboard />} />
+          <Route path="finance" element={<Finance />} />
           <Route path="settings" element={<AdminDashboard />} />
         </Route>
 
