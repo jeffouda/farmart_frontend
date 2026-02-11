@@ -280,11 +280,11 @@ const AdminUserManagement = () => {
       setLoading(true);
       try {
         // Fetch farmers
-        const farmersRes = await axios.get("/orders/admin/farmers");
+        const farmersRes = await axios.get("/admin/farmers");
         setFarmers(farmersRes.data);
         
         // Fetch buyers
-        const buyersRes = await axios.get("/orders/admin/buyers");
+        const buyersRes = await axios.get("/admin/buyers");
         setBuyers(buyersRes.data);
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -327,9 +327,9 @@ const AdminUserManagement = () => {
     
     // For farmers, use the farmers endpoint for verify
     if (action === "verify" && activeTab === "farmers") {
-      endpoint = `/orders/admin/farmers/${userId}/verify`;
+      endpoint = `/admin/farmers/${userId}/verify`;
     } else {
-      endpoint = `/orders/admin/users/${userId}/${action}`;
+      endpoint = `/admin/users/${userId}/${action}`;
     }
     
     try {
@@ -338,7 +338,7 @@ const AdminUserManagement = () => {
           await axios.post(endpoint);
           toast.success(`${user.name} has been verified successfully!`);
           // Refresh data
-          const farmersRes = await axios.get("/orders/admin/farmers");
+          const farmersRes = await axios.get("/admin/farmers");
           setFarmers(farmersRes.data);
           break;
         case "suspend":
@@ -346,10 +346,10 @@ const AdminUserManagement = () => {
           toast.success(`${user.name} has been suspended`);
           // Refresh data
           if (activeTab === "farmers") {
-            const farmersRes = await axios.get("/orders/admin/farmers");
+            const farmersRes = await axios.get("/admin/farmers");
             setFarmers(farmersRes.data);
           } else {
-            const buyersRes = await axios.get("/orders/admin/buyers");
+            const buyersRes = await axios.get("/admin/buyers");
             setBuyers(buyersRes.data);
           }
           break;
@@ -358,10 +358,10 @@ const AdminUserManagement = () => {
           toast.success(`${user.name} has been activated`);
           // Refresh data
           if (activeTab === "farmers") {
-            const farmersRes = await axios.get("/orders/admin/farmers");
+            const farmersRes = await axios.get("/admin/farmers");
             setFarmers(farmersRes.data);
           } else {
-            const buyersRes = await axios.get("/orders/admin/buyers");
+            const buyersRes = await axios.get("/admin/buyers");
             setBuyers(buyersRes.data);
           }
           break;
