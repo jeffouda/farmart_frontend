@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
-import { User, Mail, Phone, MapPin, Calendar, Edit2, Camera, Package, TrendingUp, Star, ShoppingBag } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Edit2, Camera, Package, TrendingUp, Star, ShoppingBag, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 function FarmerProfile() {
@@ -252,10 +252,17 @@ function FarmerProfile() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="px-6 py-2 bg-[#34A832] text-white rounded-lg hover:bg-[#2D8E2B] transition-colors disabled:opacity-50"
+                  disabled={saving}
+                  className="px-6 py-2 bg-[#34A832] text-white rounded-lg hover:bg-[#2D8E2B] transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                  {loading ? 'Saving...' : 'Save Changes'}
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
               </div>
             </form>
