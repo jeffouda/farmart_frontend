@@ -21,7 +21,8 @@ export const addToWishlist = createAsyncThunk(
       const response = await api.post('/wishlist/', { animal_id: animalId });
       return response.data.item;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to add to wishlist');
+      // Return animalId along with error so we can clean up optimistic item
+      return rejectWithValue({ animalId, message: error.response?.data?.message || 'Failed to add to wishlist' });
     }
   }
 );
@@ -97,14 +98,41 @@ const wishlistSlice = createSlice({
         state.error = action.payload;
       })
       // Add to wishlist
+      .addCase(addToWishlist.pending, (state, action) => {
+        // Optimistic add is already done in the component
+        // This pending state can be used for additional loading indicators if needed
+      })
       .addCase(addToWishlist.fulfilled, (state, action) => {
         const newItem = action.payload;
+        // Skip if payload is an error object
+        if (!newItem || typeof newItem === 'string' || !newItem.animal) return;
+        
         const newItemAnimalId = String(newItem.animal?.id || newItem.animal_id);
+        
+        // Remove any temporary optimistic items with the same animal_id
+        state.items = state.items.filter(
+          item => !item.id?.toString().startsWith('temp-') || 
+                  (String(item.animal?.id) !== newItemAnimalId && String(item.animal_id) !== newItemAnimalId)
+        );
+        
+        // Check if item already exists (from backend)
         const exists = state.items.some(item => 
           String(item.animal?.id) === newItemAnimalId || String(item.animal_id) === newItemAnimalId
         );
+        
         if (!exists) {
           state.items.push(newItem);
+        }
+      })
+      .addCase(addToWishlist.rejected, (state, action) => {
+        // If API call fails, remove the optimistic item
+        const errorData = action.payload;
+        if (errorData && errorData.animalId) {
+          const animalId = String(errorData.animalId);
+          state.items = state.items.filter(
+            item => !item.id?.toString().startsWith('temp-') || 
+                    (String(item.animal?.id) !== animalId && String(item.animal_id) !== animalId)
+          );
         }
       })
       // Remove from wishlist - filter by animal_id

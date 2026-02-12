@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Search, Heart, MapPin, Filter, Star, ShoppingCart, Loader2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../redux/cartSlice';
-import { addToWishlist, removeFromWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
+import { addToWishlist, removeFromWishlist, optimisticAddToWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
@@ -38,6 +38,7 @@ function BrowseLivestock() {
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [selectedLocation, setSelectedLocation] = useState('');
   const [sortBy, setSortBy] = useState('newest');
+  const [showSold, setShowSold] = useState(false);
 
   // Debounce function
   const useDebounce = (value, delay) => {
@@ -66,6 +67,7 @@ function BrowseLivestock() {
       if (debouncedMinPrice) params.append('min_price', debouncedMinPrice);
       if (debouncedMaxPrice) params.append('max_price', debouncedMaxPrice);
       if (selectedLocation) params.append('location', selectedLocation);
+      if (showSold) params.append('show_sold', 'true');
       params.append('sort', sortBy);
 
       const response = await api.get(`/livestock?${params.toString()}`);
@@ -127,6 +129,8 @@ function BrowseLivestock() {
       dispatch(removeFromWishlist(id));
       toast.success('Removed from wishlist');
     } else {
+      // Use optimistic update for instant feedback
+      dispatch(optimisticAddToWishlist(id));
       dispatch(addToWishlist(id));
       toast.success('Added to wishlist!');
     }
@@ -151,7 +155,7 @@ function BrowseLivestock() {
   };
 
   // Has active filters
-  const hasActiveFilters = selectedCategories.length > 0 || priceRange.min || priceRange.max || selectedLocation;
+  const hasActiveFilters = selectedCategories.length > 0 || priceRange.min || priceRange.max || selectedLocation || showSold;
 
   // Loading state
   if (loading) {
@@ -286,7 +290,7 @@ function BrowseLivestock() {
             </div>
 
             {/* Sort By */}
-            <div>
+            <div className="mb-6">
               <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">Sort By</h3>
               <select
                 value={sortBy}
@@ -297,6 +301,19 @@ function BrowseLivestock() {
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Show Sold Items Toggle */}
+            <div className="pt-6 border-t border-slate-100">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showSold}
+                  onChange={(e) => setShowSold(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                />
+                <span className="text-sm font-medium text-slate-700">Show Sold Items</span>
+              </label>
             </div>
           </div>
         </aside>

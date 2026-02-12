@@ -41,21 +41,35 @@ function BuyerWishlist() {
   const handleRemove = async (item) => {
     try {
       // Get the animal_id and wishlist item id
-      const animalId = item.animal?.id || item.animal_id;
-      const wishlistItemId = item.id;
+      const animalId = String(item.animal?.id || item.animal_id);
       
-      // Optimistic removal for instant UI feedback (before API call)
+      // Find the wishlist item to get its ID
+      const wishlistItem = reduxWishlistItems.find(
+        w => String(w.animal?.id) === animalId || String(w.animal_id) === animalId
+      );
+      
+      console.log('Removing wishlist item:', { wishlistItemId: wishlistItem?.id, animalId, item });
+      
+      if (!wishlistItem || !wishlistItem.id) {
+        toast.error('Invalid wishlist item');
+        return;
+      }
+      
+      // Optimistic removal for instant UI feedback
       dispatch(optimisticRemoveFromWishlist(animalId));
       
       // Call API to remove the wishlist item using the wishlist item's id
-      await api.delete(`/wishlist/${wishlistItemId}`);
+      await api.delete(`/wishlist/${wishlistItem.id}`);
       
       toast.success('Removed from wishlist');
+      
     } catch (err) {
       console.error('Error removing from wishlist:', err);
+      console.error('Error response:', err.response?.data);
+      
       // Re-fetch to sync state if API call fails
       dispatch(fetchWishlist());
-      toast.error('Failed to remove item from wishlist');
+      toast.error(err.response?.data?.message || 'Failed to remove item from wishlist');
     }
   };
 

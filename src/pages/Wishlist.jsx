@@ -2,11 +2,12 @@ import React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import { Heart, ShoppingCart, Trash2, ArrowLeft } from "lucide-react";
-import { addToCart } from "../redux/cartSlice";
+import { addToCart, removeFromCart } from "../redux/cartSlice";
 import {
-  removeFromWishlist,
+  removeFromWishlist as removeFromWishlistAPI,
   optimisticRemoveFromWishlist,
 } from "../redux/wishlistSlice";
+import api from "../api/axios";
 import toast from "react-hot-toast";
 
 const Wishlist = () => {
@@ -22,32 +23,67 @@ const Wishlist = () => {
     return item.animal || item;
   };
 
-  const handleMoveToCart = (item) => {
+  const handleMoveToCart = async (item) => {
     const animal = getAnimalData(item);
-    dispatch(
-      addToCart({
+    
+    try {
+      // Find the wishlist item to get its ID
+      const wishlistItem = wishlistItems.find(
+        w => String(w.animal?.id) === String(animal.id) || String(w.animal_id) === String(animal.id)
+      );
+      
+      if (!wishlistItem) {
+        toast.error('Item not found');
+        return;
+      }
+      
+      // Optimistic removal
+      dispatch(optimisticRemoveFromWishlist(animal.id));
+      
+      // API delete
+      await api.delete(`/wishlist/${wishlistItem.id}`);
+      
+      // Add to cart
+      dispatch(addToCart({
         id: animal.id,
         name: animal.name || animal.species,
         price: animal.price,
         image: animal.image || animal.image_url,
-      }),
-    );
-    // Optimistic removal for instant UI feedback
-    const animalId = animal.id;
-    dispatch(optimisticRemoveFromWishlist(animalId));
-    // Also call API to remove
-    dispatch(removeFromWishlist(animalId));
-    toast.success(`${animal.name || animal.species} removed from wishlist!`);
+        quantity: 1,
+      }));
+      
+      toast.success(`${animal.name || animal.species} moved to cart!`);
+    } catch (err) {
+      console.error('Error:', err);
+      toast.error('Failed to move to cart');
+    }
   };
 
-  const handleRemoveFromWishlist = (item) => {
+  const handleRemoveFromWishlist = async (item) => {
     const animal = getAnimalData(item);
-    const animalId = animal.id;
-    // Optimistic removal for instant UI feedback
-    dispatch(optimisticRemoveFromWishlist(animalId));
-    // Also call API to remove
-    dispatch(removeFromWishlist(animalId));
-    toast.success(`${animal.name || animal.species} moved to cart!`);
+    
+    try {
+      // Find the wishlist item to get its ID
+      const wishlistItem = wishlistItems.find(
+        w => String(w.animal?.id) === String(animal.id) || String(w.animal_id) === String(animal.id)
+      );
+      
+      if (!wishlistItem) {
+        toast.error('Item not found');
+        return;
+      }
+      
+      // Optimistic removal
+      dispatch(optimisticRemoveFromWishlist(animal.id));
+      
+      // API delete
+      await api.delete(`/wishlist/${wishlistItem.id}`);
+      
+      toast.success('Removed from wishlist');
+    } catch (err) {
+      console.error('Error:', err);
+      toast.error('Failed to remove from wishlist');
+    }
   };
 
   if (wishlistItems.length === 0) {

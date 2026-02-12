@@ -261,8 +261,8 @@ const FarmerOrders = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/orders/my-sales");
-      const ordersData = response.data || [];
+      const response = await api.get("/orders/");
+      const ordersData = response.data.orders || [];
       setOrders(ordersData);
 
       // Calculate stats

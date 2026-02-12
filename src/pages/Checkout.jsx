@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import { clearCart } from "../redux/cartSlice";
+import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import api from "../api/axios";
 
@@ -71,6 +72,7 @@ const Checkout = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { orderId } = useParams();
+  const { currentUser } = useAuth();
 
   const { items: cartItems, totalAmount: cartTotal } = useSelector(
     (state) => state.cart,
@@ -238,10 +240,26 @@ const Checkout = () => {
 
       if (formData.paymentMethod === "mpesa") {
         setIsWaitingForMpesa(true);
-        toast.loading("Check your phone for the PIN prompt...", {
+        
+        // Await STK push for 10 seconds
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        
+        // After 10 seconds, show order placed
+        setIsWaitingForMpesa(false);
+        toast.success("Order placed successfully! You'll receive an M-Pesa prompt shortly.", {
           id: loadingToastId,
         });
-        pollPaymentStatus(currentOrderId, loadingToastId);
+        if (!bargainOrder) dispatch(clearCart());
+        setSubmitting(false);
+        // Redirect based on user role
+        const userRole = currentUser?.role?.toLowerCase();
+        if (userRole === "farmer") {
+          navigate("/farmer-dashboard/orders");
+        } else if (userRole === "buyer") {
+          navigate("/dashboard/orders");
+        } else {
+          navigate("/orders");
+        }
       } else {
         toast.success("Farmart: Order placed successfully!", {
           id: loadingToastId,
@@ -297,13 +315,13 @@ const Checkout = () => {
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
             <Smartphone className="w-12 h-12 text-green-600 animate-bounce mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">Awaiting Payment</h3>
+            <h3 className="text-xl font-bold mb-2">Processing Payment</h3>
             <p className="text-slate-600 mb-6">
-              Processing <strong>{formatPrice(grandTotal)}</strong>
+              Sending STK push to <strong>{formData.phone}</strong>
             </p>
             <div className="flex items-center justify-center gap-2 text-green-600">
               <Loader2 className="animate-spin" size={20} />
-              <span className="font-medium">Verifying with Safaricom...</span>
+              <span className="font-medium">Please check your phone...</span>
             </div>
           </div>
         </div>

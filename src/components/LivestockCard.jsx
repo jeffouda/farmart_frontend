@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, ShoppingCart } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
-import { addToWishlist, removeFromWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
+import { addToWishlist, removeFromWishlist, optimisticAddToWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -33,7 +33,8 @@ const LivestockCard = ({ animal, onAddToCart }) => {
       dispatch(removeFromWishlist(animal.id));
       toast.success('Removed from wishlist');
     } else {
-      // Add to wishlist
+      // Add to wishlist - use optimistic update for instant feedback
+      dispatch(optimisticAddToWishlist(animal.id));
       dispatch(addToWishlist(animal.id));
       toast.success('Added to wishlist!');
     }

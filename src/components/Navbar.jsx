@@ -30,7 +30,7 @@ function Navbar() {
 
   const handleLogout = () => {
     logout();
-    navigate("/");
+    navigate("/auth");
   };
 
   // Dynamic colors based on scroll state for visibility

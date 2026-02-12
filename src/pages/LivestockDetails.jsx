@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../redux/cartSlice';
-import { addToWishlist, removeFromWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
+import { addToWishlist, removeFromWishlist, optimisticAddToWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import api from '../api/axios';
@@ -89,6 +89,8 @@ function LivestockDetails() {
       dispatch(removeFromWishlist(animal.id));
       toast.success('Removed from wishlist');
     } else {
+      // Use optimistic update for instant feedback
+      dispatch(optimisticAddToWishlist(animal.id));
       dispatch(addToWishlist(animal.id));
       toast.success('Added to wishlist!');
     }

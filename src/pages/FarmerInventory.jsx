@@ -371,7 +371,7 @@ const FarmerInventory = () => {
 
   const fetchAnimals = async () => {
     try {
-      const response = await api.get('/livestock/list');
+      const response = await api.get('/livestock/my-inventory');
       setAnimals(response.data.animals || []);
     } catch (error) {
       console.error('Failed to fetch animals:', error);
