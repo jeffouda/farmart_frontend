@@ -1,10 +1,10 @@
 import axios from "axios";
 
-// IMPORTANT: base URL should be ONLY the domain
+// IMPORTANT: base URL should include /api prefix
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const api = axios.create({
-  baseURL: API_URL, // ❌ NO /api here
+  baseURL: `${API_URL}/api`, // ✅ Include /api prefix
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
