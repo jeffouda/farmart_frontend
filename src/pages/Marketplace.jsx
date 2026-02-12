@@ -5,6 +5,7 @@ import { addToCart } from "../redux/cartSlice";
 import {
   addToWishlist,
   removeFromWishlist,
+  optimisticAddToWishlist,
   optimisticRemoveFromWishlist,
 } from "../redux/wishlistSlice";
 import { useAuth } from "../context/AuthContext";
@@ -135,6 +136,8 @@ function Marketplace() {
       dispatch(removeFromWishlist(id));
       toast.success("Removed from wishlist");
     } else {
+      // Use optimistic update for instant feedback
+      dispatch(optimisticAddToWishlist(id));
       dispatch(addToWishlist(id));
       toast.success("Added to wishlist!");
     }

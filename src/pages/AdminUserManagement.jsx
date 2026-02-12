@@ -187,6 +187,7 @@ const UserDetailsModal = ({ user, onClose, isFarmer }) => {
           {isFarmer && user.status === "pending" && (
             <button
               onClick={() => {
+                onAction("verify", user);
                 onClose();
               }}
               className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"

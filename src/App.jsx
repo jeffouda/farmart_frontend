@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -55,6 +55,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminUserManagement from "./pages/AdminUserManagement";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminDisputes from "./pages/AdminDisputes";
+import AdminSettings from "./pages/AdminSettings";
 import Finance from "./pages/admin/Finance";
 
 // Components
@@ -169,7 +170,7 @@ function App() {
           <Route path="orders" element={<AdminOrders />} />
           <Route path="disputes" element={<AdminDisputes />} />
           <Route path="finance" element={<Finance />} />
-          <Route path="settings" element={<AdminDashboard />} />
+          <Route path="settings" element={<AdminSettings />} />
         </Route>
 
         {/* Fallback 404 */}
@@ -178,7 +179,7 @@ function App() {
           element={
             <div className="flex flex-col items-center justify-center pt-20">
               <h1 className="text-2xl font-bold">404 - Page Not Found</h1>
-              <a href="/" className="text-green-600 hover:underline mt-2">
+              <a href="BuyerOrders" className="text-green-600 hover:underline mt-2">
                 Return Home
               </a>
             </div>
