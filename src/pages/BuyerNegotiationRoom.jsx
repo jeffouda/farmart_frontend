@@ -41,9 +41,7 @@ const BuyerNegotiationRoom = () => {
     try {
       setSending(true);
       await api.post(`/bargain/sessions/${id}/messages`, {
-        message: newMessage,
-        sender_id: currentUser.id,
-        sender_type: currentUser.role
+        message: newMessage
       });
       setNewMessage('');
       fetchSession();

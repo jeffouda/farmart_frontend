@@ -6,6 +6,7 @@ import { fetchWishlist, clearWishlist } from "./redux/wishlistSlice";
 import { fetchOrders, clearOrders } from "./redux/ordersSlice";
 import { clearCart } from "./redux/cartSlice";
 import { useAuth } from "./context/AuthContext";
+import ThemedBackground from "./components/ThemedBackground";
 
 // Layouts
 import MainLayout from "./layouts/MainLayout";
@@ -83,6 +84,7 @@ function App() {
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      <ThemedBackground />
       <ScrollToTop />
       <Routes>
         {/* --- Public Routes (with MainLayout) --- */}

@@ -83,7 +83,7 @@ const NegotiationRoom = () => {
 
     const tempMsg = {
       id: Date.now(),
-      content: newMessage,
+      message: newMessage,
       sender_id: currentUser?.id,
       created_at: new Date().toISOString()
     };
@@ -93,8 +93,7 @@ const NegotiationRoom = () => {
 
     try {
       await api.post('/bargain/sessions/' + sessionId + '/messages', {
-        content: tempMsg.content,
-        sender_id: currentUser?.id
+        message: newMessage
       });
       const res = await api.get('/bargain/sessions/' + sessionId);
       setMessages(Array.isArray(res.data.messages) ? res.data.messages : []);
@@ -240,7 +239,7 @@ const NegotiationRoom = () => {
                 <div className={'max-w-[75%] px-4 py-2 rounded-lg shadow-sm text-sm relative ' + 
                   (myMsg ? 'bg-[#d9fdd3] text-gray-800 rounded-br-none' : 'bg-white text-gray-800 rounded-bl-none')
                 }>
-                  <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  <p className="whitespace-pre-wrap leading-relaxed">{msg.message || msg.content}</p>
                   <span className="text-[10px] text-gray-400 block text-right mt-1">
                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>

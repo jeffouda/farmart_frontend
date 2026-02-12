@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { motion } from 'framer-motion';
 import {
   User,
   Package,
@@ -13,6 +14,16 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+
+// Farm-themed background style
+const FARM_BACKGROUND = {
+  backgroundColor: '#ecfdf5',
+  backgroundImage: `
+    radial-gradient(at 40% 20%, rgba(16, 185, 129, 0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(34, 197, 94, 0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(16, 185, 129, 0.08) 0px, transparent 50%)
+  `
+};
 
 // Sidebar navigation links
 const SIDEBAR_LINKS = [
@@ -58,14 +69,19 @@ function BuyerDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={FARM_BACKGROUND}>
       {/* Global Navbar */}
       <Navbar />
 
       {/* Dashboard Container - Centered with max-width */}
       <div className="max-w-7xl mx-auto flex pt-20 mt-4 min-h-[calc(100vh-6rem)]">
         {/* Left Sidebar - Sticky below Navbar */}
-        <aside className="w-64 flex-shrink-0 hidden md:block border-r border-gray-200 bg-white sticky top-16 h-[calc(100vh-4rem)]">
+        <motion.aside 
+          className="w-64 flex-shrink-0 hidden md:block border-r border-gray-200 bg-white/80 backdrop-blur-sm sticky top-16 h-[calc(100vh-4rem)] rounded-2xl m-2"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4 }}
+        >
           <div className="flex flex-col h-full">
             {/* User Info */}
             <div className="p-6 bg-green-600 text-white">
@@ -113,7 +129,7 @@ function BuyerDashboard() {
               </div>
             </nav>
           </div>
-        </aside>
+        </motion.aside>
 
         {/* Right Main Content Area */}
         <main className="flex-1 p-6 overflow-y-auto">

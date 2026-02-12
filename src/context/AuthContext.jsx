@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     verifyToken();
-  }, []);
+  }, [token]);
 
   /**
    * Login user with credentials

@@ -70,9 +70,10 @@ function Negotiation() {
       });
       setNewMessage("");
       fetchMessages();
+      toast.success("Message sent");
     } catch (error) {
       console.error("Failed to send message:", error);
-      toast.error("Failed to send message");
+      toast.error(error.response?.data?.error || "Failed to send message");
     } finally {
       setSending(false);
     }

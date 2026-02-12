@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import {
@@ -12,7 +13,9 @@ import {
   XCircle,
   Clock,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Menu,
+  X
 } from "lucide-react";
 import {
   LineChart,
@@ -25,6 +28,32 @@ import {
   Area,
   AreaChart
 } from "recharts";
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 100 },
+  },
+};
+
+const cardHover = {
+  rest: { scale: 1, y: 0 },
+  hover: { scale: 1.02, y: -4 },
+};
 
 // Mock KPI Data
 const kpiData = [
@@ -123,8 +152,15 @@ const signupTrendData = [
 ];
 
 // Stat Card Component
-const StatCard = ({ title, value, change, positive, icon: Icon, color }) => (
-  <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+const StatCard = ({ title, value, change, positive, icon: Icon, color, delay = 0 }) => (
+  <motion.div
+    variants={itemVariants}
+    whileHover={{ scale: 1.02, y: -4 }}
+    className="bg-slate-800 rounded-xl p-6 border border-slate-700 cursor-pointer"
+    initial="hidden"
+    animate="visible"
+    transition={{ delay }}
+  >
     <div className="flex items-start justify-between">
       <div>
         <p className="text-slate-400 text-sm font-medium">{title}</p>
@@ -145,12 +181,19 @@ const StatCard = ({ title, value, change, positive, icon: Icon, color }) => (
       </span>
       <span className="text-slate-500 text-sm">vs last month</span>
     </div>
-  </div>
+  </motion.div>
 );
 
 // Activity Item Component
-const ActivityItem = ({ activity }) => (
-  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-700/50 transition-colors">
+const ActivityItem = ({ activity, index }) => (
+  <motion.div
+    variants={itemVariants}
+    whileHover={{ scale: 1.01, backgroundColor: "rgba(51, 65, 85, 0.5)" }}
+    className="flex items-start gap-3 p-3 rounded-lg transition-colors cursor-pointer"
+    initial="hidden"
+    animate="visible"
+    transition={{ delay: index * 0.1 }}
+  >
     <div className={`w-9 h-9 ${activity.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
       <activity.icon size={18} className={activity.color} />
     </div>
@@ -158,7 +201,7 @@ const ActivityItem = ({ activity }) => (
       <p className="text-slate-200 text-sm font-medium truncate">{activity.message}</p>
       <p className="text-slate-500 text-xs mt-0.5">{activity.time}</p>
     </div>
-  </div>
+  </motion.div>
 );
 
 const AdminDashboard = () => {
@@ -251,31 +294,41 @@ const AdminDashboard = () => {
     },
   ];
   return (
-    <div className="space-y-6">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Dashboard</h1>
           <p className="text-slate-400 text-sm mt-1">
             Welcome back! Here's what's happening on Farmart.
           </p>
         </div>
-        <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+        <motion.button
+          variants={itemVariants}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+        >
           Generate Report
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpiData.map((kpi, index) => (
-          <StatCard key={index} {...kpi} />
+          <StatCard key={index} {...kpi} delay={index * 0.1} />
         ))}
       </div>
 
       {/* Livestock & Orders Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Livestock Stats */}
-        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+        <motion.div variants={itemVariants} className="bg-slate-800 rounded-xl p-6 border border-slate-700">
           <h3 className="text-lg font-semibold text-white mb-4">Livestock Overview</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -287,20 +340,26 @@ const AdminDashboard = () => {
               <span className="text-xl font-semibold text-green-500">{stats?.available_livestock || 0}</span>
             </div>
             <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-green-500 rounded-full transition-all"
-                style={{ width: `${stats?.total_livestock > 0 ? (stats?.available_livestock / stats?.total_livestock * 100) : 0}%` }}
-              ></div>
+              <motion.div
+                className="h-full bg-green-500 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${stats?.total_livestock > 0 ? (stats?.available_livestock / stats?.total_livestock * 100) : 0}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              ></motion.div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Order Stats */}
-        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+        <motion.div variants={itemVariants} className="bg-slate-800 rounded-xl p-6 border border-slate-700">
           <h3 className="text-lg font-semibold text-white mb-4">Order Statistics</h3>
           <div className="space-y-3">
             {orderStats.map((stat, index) => (
-              <div key={index} className="flex items-center justify-between">
+              <motion.div
+                key={index}
+                variants={itemVariants}
+                className="flex items-center justify-between"
+              >
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 ${stat.bg} rounded-lg flex items-center justify-center`}>
                     <stat.icon size={18} className={stat.color} />
@@ -308,12 +367,12 @@ const AdminDashboard = () => {
                   <span className="text-slate-300">{stat.title}</span>
                 </div>
                 <span className="text-xl font-bold text-white">{stat.value}</span>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
