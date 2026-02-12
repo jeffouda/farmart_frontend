@@ -10,7 +10,6 @@ import {
   MapPin,
   Phone,
   CreditCard,
-  Truck,
   ArrowLeft,
   Check,
   Loader2,
@@ -116,11 +115,8 @@ const Checkout = () => {
     setLoadingOrder(true);
     try {
       const response = await api.get(`/orders/${orderId}`);
-      if (
-        response.data.status === "paid" ||
-        response.data.status === "completed"
-      ) {
-        toast.error("This order has already been paid!");
+      if (["paid", "completed", "delivered"].includes(response.data.status)) {
+        toast.error("This order has already been processed!");
         navigate("/dashboard/orders");
         return;
       }
@@ -169,7 +165,7 @@ const Checkout = () => {
 
   const pollPaymentStatus = async (id, toastId) => {
     let attempts = 0;
-    const maxAttempts = 30;
+    const maxAttempts = 20; // ~1 minute of polling
 
     const interval = setInterval(async () => {
       try {
@@ -177,15 +173,11 @@ const Checkout = () => {
         const response = await api.get(`/orders/poll-status/${id}`);
         const { status } = response.data;
 
-        if (
-          status === "paid" ||
-          status === "completed" ||
-          status === "delivered"
-        ) {
+        if (["paid", "completed", "delivered"].includes(status)) {
           clearInterval(interval);
           setIsWaitingForMpesa(false);
           setSubmitting(false);
-          toast.success("Payment confirmed!", { id: toastId });
+          toast.success("Payment confirmed successfully!", { id: toastId });
           if (!bargainOrder) dispatch(clearCart());
           navigate(`/order-confirmation/${id}`);
         } else if (status === "failed" || attempts >= maxAttempts) {
@@ -194,10 +186,12 @@ const Checkout = () => {
           setSubmitting(false);
           toast.error(
             status === "failed"
-              ? "Payment failed or was cancelled."
-              : "Request timed out. Check your orders page for status.",
+              ? "Payment failed. Please try again."
+              : "We haven't received the payment confirmation yet. Please check your orders later.",
             { id: toastId },
           );
+          // Redirect to orders anyway so they can see the pending status
+          navigate("/dashboard/orders");
         }
       } catch (error) {
         console.error("Polling error:", error);
@@ -209,7 +203,7 @@ const Checkout = () => {
     if (!validateForm()) return;
 
     setSubmitting(true);
-    const loadingToastId = toast.loading("Processing...");
+    const loadingToastId = toast.loading("Creating order...");
 
     try {
       const orderPayload = {
@@ -230,98 +224,45 @@ const Checkout = () => {
         currentOrderId = bargainOrder.id;
       } else {
         const response = await api.post("/orders/", orderPayload);
-        currentOrderId =
-          response.data.order_id || response.data.order?.id || response.data.id;
-      }
-
-      if (!currentOrderId) {
-        throw new Error("Failed to get order ID from server response");
+        currentOrderId = response.data.order_id || response.data.id;
       }
 
       if (formData.paymentMethod === "mpesa") {
         setIsWaitingForMpesa(true);
-        
-        // Await STK push for 10 seconds
-        await new Promise(resolve => setTimeout(resolve, 10000));
-        
-        // After 10 seconds, show order placed
-        setIsWaitingForMpesa(false);
-        toast.success("Order placed successfully! You'll receive an M-Pesa prompt shortly.", {
-          id: loadingToastId,
-        });
-        if (!bargainOrder) dispatch(clearCart());
-        setSubmitting(false);
-        // Redirect based on user role
-        const userRole = currentUser?.role?.toLowerCase();
-        if (userRole === "farmer") {
-          navigate("/farmer-dashboard/orders");
-        } else if (userRole === "buyer") {
-          navigate("/dashboard/orders");
-        } else {
-          navigate("/orders");
-        }
+        toast.loading("Sending M-Pesa prompt...", { id: loadingToastId });
+
+        // This triggers your polling logic to wait for the Ngrok/Render callback
+        await pollPaymentStatus(currentOrderId, loadingToastId);
       } else {
-        toast.success("Farmart: Order placed successfully!", {
-          id: loadingToastId,
-        });
+        toast.success("Order placed successfully!", { id: loadingToastId });
         if (!bargainOrder) dispatch(clearCart());
         setSubmitting(false);
         navigate(`/order-confirmation/${currentOrderId}`);
       }
     } catch (error) {
       setSubmitting(false);
-      toast.error(
-        error.response?.data?.message ||
-          error.response?.data?.error ||
-          "Failed to place order.",
-        { id: loadingToastId },
-      );
+      toast.error(error.response?.data?.message || "Failed to place order.", {
+        id: loadingToastId,
+      });
     }
   };
 
-  if (loadingOrder) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-green-600 animate-spin mx-auto mb-4" />
-          <p className="text-slate-600 font-medium">Loading order details...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (items.length === 0) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="text-center">
-          <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">
-            {bargainOrder ? "No items in order" : "Your cart is empty"}
-          </h2>
-          <Link
-            to={bargainOrder ? "/dashboard/orders" : "/marketplace"}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors">
-            <ArrowLeft size={20} />
-            {bargainOrder ? "Back to Orders" : "Browse Marketplace"}
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
       {isWaitingForMpesa && (
-        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
             <Smartphone className="w-12 h-12 text-green-600 animate-bounce mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">Processing Payment</h3>
-            <p className="text-slate-600 mb-6">
-              Sending STK push to <strong>{formData.phone}</strong>
+            <h3 className="text-xl font-bold mb-2 dark:text-white">
+              Processing Payment
+            </h3>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              Please enter your M-Pesa PIN on the prompt sent to{" "}
+              <strong>{formData.phone}</strong>
             </p>
             <div className="flex items-center justify-center gap-2 text-green-600">
               <Loader2 className="animate-spin" size={20} />
-              <span className="font-medium">Please check your phone...</span>
+              <span className="font-medium">Waiting for confirmation...</span>
             </div>
           </div>
         </div>
@@ -331,22 +272,23 @@ const Checkout = () => {
         <div className="flex items-center gap-4 mb-8">
           <Link
             to={bargainOrder ? "/dashboard/orders" : "/cart"}
-            className="text-slate-600 hover:text-slate-900">
+            className="text-slate-600 dark:text-slate-400 hover:text-slate-900">
             <ArrowLeft size={24} />
           </Link>
-          <h1 className="text-2xl font-bold">Checkout</h1>
+          <h1 className="text-2xl font-bold dark:text-white">Checkout</h1>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Form Section */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-xl shadow-sm p-6 space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm p-6 space-y-4 border dark:border-slate-800">
+              <div className="flex items-center gap-2 pb-2 border-b dark:border-slate-800">
                 <MapPin className="text-green-600" size={20} />
-                <h2 className="font-bold">Shipping</h2>
+                <h2 className="font-bold dark:text-white">Shipping Details</h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="text-sm font-semibold">
+                  <label className="text-sm font-semibold dark:text-slate-300">
                     M-Pesa Number *
                   </label>
                   <input
@@ -355,64 +297,74 @@ const Checkout = () => {
                     placeholder="07XXXXXXXX"
                     value={formData.phone}
                     onChange={handleChange}
-                    className={`w-full mt-1 p-3 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none ${errors.phone ? "border-red-500" : "border-slate-200"}`}
+                    className={`w-full mt-1 p-3 border rounded-lg bg-transparent dark:text-white focus:ring-2 focus:ring-green-500 outline-none ${errors.phone ? "border-red-500" : "border-slate-200 dark:border-slate-700"}`}
                   />
                   {errors.phone && (
                     <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
                   )}
                 </div>
                 <div>
-                  <label className="text-sm font-semibold">Full Name *</label>
+                  <label className="text-sm font-semibold dark:text-slate-300">
+                    Full Name *
+                  </label>
                   <input
                     type="text"
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleChange}
-                    className="w-full mt-1 p-3 border rounded-lg outline-none"
+                    className="w-full mt-1 p-3 border rounded-lg dark:border-slate-700 bg-transparent dark:text-white outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-semibold">Email *</label>
+                  <label className="text-sm font-semibold dark:text-slate-300">
+                    Email *
+                  </label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full mt-1 p-3 border rounded-lg outline-none"
+                    className="w-full mt-1 p-3 border rounded-lg dark:border-slate-700 bg-transparent dark:text-white outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-semibold">County *</label>
+                  <label className="text-sm font-semibold dark:text-slate-300">
+                    County *
+                  </label>
                   <select
                     name="county"
                     value={formData.county}
                     onChange={handleChange}
-                    className="w-full mt-1 p-3 border rounded-lg outline-none">
-                    <option value="">Select County</option>
+                    className="w-full mt-1 p-3 border rounded-lg dark:border-slate-700 bg-transparent dark:text-white outline-none">
+                    <option value="" className="dark:bg-slate-900">
+                      Select County
+                    </option>
                     {KENYAN_COUNTIES.map((c) => (
-                      <option key={c} value={c}>
+                      <option key={c} value={c} className="dark:bg-slate-900">
                         {c}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold">Town *</label>
+                  <label className="text-sm font-semibold dark:text-slate-300">
+                    Town/Area *
+                  </label>
                   <input
                     type="text"
                     name="town"
                     value={formData.town}
                     onChange={handleChange}
-                    className="w-full mt-1 p-3 border rounded-lg outline-none"
+                    className="w-full mt-1 p-3 border rounded-lg dark:border-slate-700 bg-transparent dark:text-white outline-none"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm p-6 border dark:border-slate-800">
               <div className="flex items-center gap-2 mb-4">
                 <CreditCard className="text-green-600" size={20} />
-                <h2 className="font-bold">Payment</h2>
+                <h2 className="font-bold dark:text-white">Payment Method</h2>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
@@ -420,53 +372,60 @@ const Checkout = () => {
                   onClick={() =>
                     setFormData({ ...formData, paymentMethod: "mpesa" })
                   }
-                  className={`p-4 border-2 rounded-xl text-left ${formData.paymentMethod === "mpesa" ? "border-green-600 bg-green-50" : "border-slate-100"}`}>
-                  <p className="font-bold">M-Pesa STK</p>
+                  className={`p-4 border-2 rounded-xl text-left transition-all ${formData.paymentMethod === "mpesa" ? "border-green-600 bg-green-50 dark:bg-green-900/20" : "border-slate-100 dark:border-slate-800"}`}>
+                  <p className="font-bold dark:text-white">M-Pesa STK Push</p>
+                  <p className="text-xs text-slate-500">
+                    Pay securely via phone
+                  </p>
                 </button>
                 <button
                   type="button"
                   onClick={() =>
                     setFormData({ ...formData, paymentMethod: "cod" })
                   }
-                  className={`p-4 border-2 rounded-xl text-left ${formData.paymentMethod === "cod" ? "border-green-600 bg-green-50" : "border-slate-100"}`}>
-                  <p className="font-bold">Cash on Delivery</p>
+                  className={`p-4 border-2 rounded-xl text-left transition-all ${formData.paymentMethod === "cod" ? "border-green-600 bg-green-50 dark:bg-green-900/20" : "border-slate-100 dark:border-slate-800"}`}>
+                  <p className="font-bold dark:text-white">Cash on Delivery</p>
+                  <p className="text-xs text-slate-500">Pay when you receive</p>
                 </button>
               </div>
             </div>
           </div>
 
+          {/* Summary Section */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-md p-6 sticky top-24">
-              <h2 className="font-black text-slate-900 mb-4 uppercase">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md p-6 sticky top-24 border dark:border-slate-800">
+              <h2 className="font-black text-slate-900 dark:text-white mb-4 uppercase tracking-wider">
                 Summary
               </h2>
-              <div className="space-y-3 pb-4 border-b">
-                <div className="flex justify-between">
-                  <span>Base Price</span>
+              <div className="space-y-3 pb-4 border-b dark:border-slate-800">
+                <div className="flex justify-between dark:text-slate-300">
+                  <span>Subtotal</span>
                   <span className="font-bold">{formatPrice(baseTotal)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between dark:text-slate-300">
                   <span>Shipping</span>
                   <span className="font-bold">{formatPrice(shippingCost)}</span>
                 </div>
               </div>
               <div className="pt-4 flex justify-between items-end">
-                <span className="text-sm font-bold text-slate-500">Total</span>
-                <span className="text-2xl font-black text-green-700 leading-none">
+                <span className="text-sm font-bold text-slate-500 uppercase">
+                  Total
+                </span>
+                <span className="text-2xl font-black text-green-700 dark:text-green-500 leading-none">
                   {formatPrice(grandTotal)}
                 </span>
               </div>
               <button
                 onClick={handlePlaceOrder}
                 disabled={submitting}
-                className="w-full mt-8 py-4 bg-slate-900 text-white rounded-xl font-black uppercase hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-3">
+                className="w-full mt-8 py-4 bg-slate-900 dark:bg-green-600 text-white rounded-xl font-black uppercase hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-3 transition-all">
                 {submitting ? (
                   <Loader2 className="animate-spin" />
                 ) : (
                   <Check size={20} />
                 )}
                 {formData.paymentMethod === "mpesa"
-                  ? "Pay Now"
+                  ? "Complete Payment"
                   : "Confirm Order"}
               </button>
             </div>
