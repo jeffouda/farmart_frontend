@@ -14,7 +14,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import api from "../api/axios"; // Import your custom axios instance
+import api from "../api/axios";
 
 const KENYAN_COUNTIES = [
   "Mombasa",
@@ -70,18 +70,13 @@ const SignUp = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
   const [isLogin, setIsLogin] = useState(false);
   const [role, setRole] = useState("farmer");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  useEffect(() => {
-    if (location.state?.role) {
-      setRole(location.state.role);
-    }
-  }, [location.state]);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -93,6 +88,12 @@ const SignUp = () => {
     confirmPassword: "",
   });
 
+  useEffect(() => {
+    if (location.state?.role) {
+      setRole(location.state.role);
+    }
+  }, [location.state]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -103,8 +104,9 @@ const SignUp = () => {
     setIsLoading(true);
     setMessage(null);
 
-    // Registration Validations
+    // --- Validation ---
     if (!isLogin) {
+      // Phone number validation
       const phone = formData.phone_number.trim();
       const validPhone =
         /^07\d{8}$/.test(phone) ||
@@ -120,6 +122,7 @@ const SignUp = () => {
         return;
       }
 
+      // Password match check
       if (formData.password !== formData.confirmPassword) {
         setMessage({ type: "error", text: "Passwords do not match" });
         setIsLoading(false);
@@ -129,8 +132,7 @@ const SignUp = () => {
 
     try {
       if (isLogin) {
-        // --- CLEAN LOGIN LOGIC ---
-        // Only send what Flask expects
+        // --- LOGIN ---
         const credentials = {
           email: formData.email,
           password: formData.password,
@@ -139,23 +141,17 @@ const SignUp = () => {
         const loggedInUser = await login(credentials);
 
         if (loggedInUser) {
-          // Normalize role check from your AuthContext structure
           const userRole = (
             loggedInUser.role ||
             loggedInUser.user?.role ||
             ""
           ).toLowerCase();
-
-          if (userRole === "farmer") {
-            navigate("/farmer-dashboard");
-          } else {
-            navigate("/dashboard");
-          }
+          navigate(userRole === "farmer" ? "/farmer-dashboard" : "/dashboard");
         } else {
           setMessage({ type: "error", text: "Invalid email or password" });
         }
       } else {
-        // --- REGISTRATION LOGIC ---
+        // --- REGISTRATION ---
         const payload = {
           full_name: formData.full_name,
           phone_number: formData.phone_number,
@@ -163,14 +159,10 @@ const SignUp = () => {
           email: formData.email,
           password: formData.password,
           role: role,
+          ...(role === "farmer" && { farm_name: formData.farm_name }),
         };
 
-        if (role === "farmer") {
-          payload.farm_name = formData.farm_name;
-        }
-
-        // Use the custom axios 'api' instance to include ngrok headers
-        const response = await api.post("/auth/register", payload);
+        await api.post("/auth/register", payload);
 
         setMessage({
           type: "success",
@@ -193,6 +185,7 @@ const SignUp = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md mx-auto shadow-xl rounded-2xl bg-white p-8">
+        {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-slate-900">Farmart</h1>
           <p className="text-slate-600 mt-2">
@@ -200,9 +193,14 @@ const SignUp = () => {
           </p>
         </div>
 
+        {/* Message */}
         {message && (
           <div
-            className={`mb-6 p-4 rounded-lg border flex items-start gap-3 ${message.type === "success" ? "bg-green-50 border-green-200 text-green-800" : "bg-red-50 border-red-200 text-red-800"}`}>
+            className={`mb-6 p-4 rounded-lg border flex items-start gap-3 ${
+              message.type === "success"
+                ? "bg-green-50 border-green-200 text-green-800"
+                : "bg-red-50 border-red-200 text-red-800"
+            }`}>
             {message.type === "success" ? (
               <CheckCircle2 className="w-5 h-5 mt-0.5" />
             ) : (
@@ -212,6 +210,7 @@ const SignUp = () => {
           </div>
         )}
 
+        {/* Toggle SignIn / SignUp */}
         <div className="flex bg-slate-100 rounded-lg p-1 mb-6">
           <button
             type="button"
@@ -227,149 +226,152 @@ const SignUp = () => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-700 mb-3">
-                I am a...
-              </label>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole("farmer")}
-                  className={`flex-1 p-3 rounded-lg border-2 flex flex-col items-center gap-2 ${role === "farmer" ? "border-green-600 bg-green-50 text-green-600" : "border-slate-200 text-slate-600"}`}>
-                  <Tractor className="w-5 h-5" />
-                  <span className="text-sm font-medium">Farmer</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole("buyer")}
-                  className={`flex-1 p-3 rounded-lg border-2 flex flex-col items-center gap-2 ${role === "buyer" ? "border-green-600 bg-green-50 text-green-600" : "border-slate-200 text-slate-600"}`}>
-                  <ShoppingBag className="w-5 h-5" />
-                  <span className="text-sm font-medium">Buyer</span>
-                </button>
+            <>
+              {/* Role Selector */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  I am a...
+                </label>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRole("farmer")}
+                    className={`flex-1 p-3 rounded-lg border-2 flex flex-col items-center gap-2 ${role === "farmer" ? "border-green-600 bg-green-50 text-green-600" : "border-slate-200 text-slate-600"}`}>
+                    <Tractor className="w-5 h-5" />
+                    <span className="text-sm font-medium">Farmer</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole("buyer")}
+                    className={`flex-1 p-3 rounded-lg border-2 flex flex-col items-center gap-2 ${role === "buyer" ? "border-green-600 bg-green-50 text-green-600" : "border-slate-200 text-slate-600"}`}>
+                    <ShoppingBag className="w-5 h-5" />
+                    <span className="text-sm font-medium">Buyer</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
 
-          <div className="space-y-4">
-            {!isLogin && (
-              <>
+              {/* Farmer fields */}
+              <input
+                type="text"
+                name="full_name"
+                value={formData.full_name}
+                onChange={handleChange}
+                placeholder="Full Name"
+                required
+                className="w-full px-4 py-2.5 border rounded-lg text-sm"
+              />
+              <div className="relative">
+                <Phone className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <input
+                  type="tel"
+                  name="phone_number"
+                  value={formData.phone_number}
+                  onChange={handleChange}
+                  placeholder="Phone (07...)"
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm"
+                />
+              </div>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
-                  name="full_name"
-                  value={formData.full_name}
+                  name="location"
+                  list="county-list"
+                  value={formData.location}
                   onChange={handleChange}
-                  placeholder="Full Name"
+                  placeholder="Select County"
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm"
+                />
+                <datalist id="county-list">
+                  {KENYAN_COUNTIES.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </div>
+              {role === "farmer" && (
+                <input
+                  type="text"
+                  name="farm_name"
+                  value={formData.farm_name}
+                  onChange={handleChange}
+                  placeholder="Farm Name"
                   required
                   className="w-full px-4 py-2.5 border rounded-lg text-sm"
                 />
-                <div className="relative">
-                  <Phone className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                  <input
-                    type="tel"
-                    name="phone_number"
-                    value={formData.phone_number}
-                    onChange={handleChange}
-                    placeholder="Phone (07...)"
-                    required
-                    className="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm"
-                  />
-                </div>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    name="location"
-                    list="county-list"
-                    value={formData.location}
-                    onChange={handleChange}
-                    placeholder="Select County"
-                    required
-                    className="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm"
-                  />
-                  <datalist id="county-list">
-                    {KENYAN_COUNTIES.map((c) => (
-                      <option key={c} value={c} />
-                    ))}
-                  </datalist>
-                </div>
-                {role === "farmer" && (
-                  <input
-                    type="text"
-                    name="farm_name"
-                    value={formData.farm_name}
-                    onChange={handleChange}
-                    placeholder="Farm Name"
-                    required
-                    className="w-full px-4 py-2.5 border rounded-lg text-sm"
-                  />
-                )}
-              </>
-            )}
+              )}
+            </>
+          )}
 
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="Email Address"
-                required
-                className="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm"
-              />
-            </div>
+          {/* Email */}
+          <div className="relative">
+            <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="Email Address"
+              required
+              className="w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm"
+            />
+          </div>
 
+          {/* Password */}
+          <div className="relative">
+            <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Password"
+              required
+              className="w-full pl-10 pr-10 py-2.5 border rounded-lg text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-3 text-slate-400">
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+
+          {/* Confirm Password */}
+          {!isLogin && (
             <div className="relative">
               <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
               <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                value={formData.confirmPassword}
                 onChange={handleChange}
-                placeholder="Password"
+                placeholder="Confirm Password"
                 required
                 className="w-full pl-10 pr-10 py-2.5 border rounded-lg text-sm"
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute right-3 top-3 text-slate-400">
-                {showPassword ? (
+                {showConfirmPassword ? (
                   <EyeOff className="w-4 h-4" />
                 ) : (
                   <Eye className="w-4 h-4" />
                 )}
               </button>
             </div>
+          )}
 
-            {!isLogin && (
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Confirm Password"
-                  required
-                  className="w-full pl-10 pr-10 py-2.5 border rounded-lg text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-3 text-slate-400">
-                  {showConfirmPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-
+          {/* Submit */}
           <button
             type="submit"
             disabled={isLoading}
