@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Mail,
   Lock,
@@ -7,9 +7,9 @@ import {
   EyeOff,
   Loader2,
   AlertCircle,
-  CheckCircle2
-} from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+  CheckCircle2,
+} from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
   const { login } = useAuth();
@@ -17,66 +17,64 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const validateEmail = (email) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-  };
+  const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setMessage(null);
 
-    // Validate email format
+    // Validate email
     if (!validateEmail(formData.email)) {
-      setMessage({ type: 'error', text: 'Please enter a valid email address' });
+      setMessage({ type: "error", text: "Please enter a valid email address" });
       setIsLoading(false);
       return;
     }
 
     // Validate password length
     if (formData.password.length < 6) {
-      setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
+      setMessage({
+        type: "error",
+        text: "Password must be at least 6 characters",
+      });
       setIsLoading(false);
       return;
     }
 
     try {
       const loggedInUser = await login(formData);
-      
+
       if (loggedInUser) {
-        // Determine Role & Redirect
-        const userRole = loggedInUser.user?.role || loggedInUser.role || '';
+        // Determine role & redirect
+        const userRole = loggedInUser.user?.role || loggedInUser.role || "";
         const cleanRole = userRole.toLowerCase();
-        
-        if (cleanRole === 'admin') {
-          navigate('/admin', { replace: true });
-        } else if (cleanRole === 'farmer') {
-          navigate('/farmer-dashboard', { replace: true });
+
+        if (cleanRole === "admin") {
+          navigate("/admin", { replace: true });
+        } else if (cleanRole === "farmer") {
+          navigate("/farmer-dashboard", { replace: true });
         } else {
-          navigate('/browse', { replace: true });
+          navigate("/browse", { replace: true });
         }
       } else {
-        setMessage({
-          type: 'error',
-          text: 'Invalid email or password'
-        });
+        setMessage({ type: "error", text: "Invalid email or password" });
       }
     } catch (err) {
       setMessage({
-        type: 'error',
-        text: err.response?.data?.message || 'Connection failed. Please try again.'
+        type: "error",
+        text:
+          err.response?.data?.message || "Connection failed. Please try again.",
       });
     } finally {
       setIsLoading(false);
@@ -85,30 +83,45 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Side - Image/Branding */}
+      {/* Left Side */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-green-600 to-green-800 p-12 flex-col justify-between relative overflow-hidden">
-        {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
-          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <svg
+            className="w-full h-full"
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none">
             <defs>
-              <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5"/>
+              <pattern
+                id="grid"
+                width="10"
+                height="10"
+                patternUnits="userSpaceOnUse">
+                <path
+                  d="M 10 0 L 0 0 0 10"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="0.5"
+                />
               </pattern>
             </defs>
             <rect width="100" height="100" fill="url(#grid)" />
           </svg>
         </div>
-        
-        {/* Content */}
+
         <div className="relative z-10">
           <h1 className="text-4xl font-bold text-white">Farmart</h1>
-          <p className="text-green-100 mt-2 text-lg">Connecting Farmers, Growing Business</p>
+          <p className="text-green-100 mt-2 text-lg">
+            Connecting Farmers, Growing Business
+          </p>
         </div>
-        
+
         <div className="relative z-10">
-          <h2 className="text-3xl font-semibold text-white mb-4">Welcome Back!</h2>
+          <h2 className="text-3xl font-semibold text-white mb-4">
+            Welcome Back!
+          </h2>
           <p className="text-green-100 text-lg">
-            Manage your livestock, track orders, and grow your agricultural business.
+            Manage your livestock, track orders, and grow your agricultural
+            business.
           </p>
           <div className="mt-8 flex items-center gap-4">
             <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
@@ -120,13 +133,12 @@ const Login = () => {
             </div>
           </div>
         </div>
-        
-        {/* Decorative Elements */}
+
         <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-white/10 rounded-full" />
         <div className="absolute top-1/2 -right-10 w-40 h-40 bg-white/10 rounded-full" />
       </div>
 
-      {/* Right Side - Login Form */}
+      {/* Right Side */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-slate-50">
         <div className="w-full max-w-md">
           {/* Mobile Header */}
@@ -137,20 +149,24 @@ const Login = () => {
 
           {/* Form Card */}
           <div className="bg-white rounded-2xl shadow-xl p-8">
-            {/* Header */}
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-slate-900">Welcome Back</h2>
-              <p className="text-slate-600 mt-1">Enter your credentials to access your account</p>
+              <h2 className="text-2xl font-bold text-slate-900">
+                Welcome Back
+              </h2>
+              <p className="text-slate-600 mt-1">
+                Enter your credentials to access your account
+              </p>
             </div>
 
-            {/* Toast Notifications */}
+            {/* Toast */}
             {message && (
-              <div className={`mb-6 p-4 rounded-lg border flex items-start gap-3 ${
-                message.type === 'success'
-                  ? 'bg-green-50 border-green-200 text-green-800'
-                  : 'bg-red-50 border-red-200 text-red-800'
-              }`}>
-                {message.type === 'success' ? (
+              <div
+                className={`mb-6 p-4 rounded-lg border flex items-start gap-3 ${
+                  message.type === "success"
+                    ? "bg-green-50 border-green-200 text-green-800"
+                    : "bg-red-50 border-red-200 text-red-800"
+                }`}>
+                {message.type === "success" ? (
                   <CheckCircle2 className="w-5 h-5 mt-0.5 flex-shrink-0" />
                 ) : (
                   <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
@@ -162,9 +178,11 @@ const Login = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-slate-700 mb-1">
                   Email Address
-               late-700 mb </label>
+                </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
@@ -176,7 +194,6 @@ const Login = () => {
                     placeholder="you@example.com"
                     required
                     autoComplete="email"
-                    aria-describedby="email-helper"
                     className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                   />
                 </div>
@@ -190,7 +207,7 @@ const Login = () => {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
@@ -201,26 +218,30 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
               </div>
 
-              {/* Forgot Password Link */}
+              {/* Forgot Password */}
               <div className="flex justify-end">
-                <a href="#" className="text-sm text-green-600 hover:text-green-700 font-medium">
+                <a
+                  href="#"
+                  className="text-sm text-green-600 hover:text-green-700 font-medium">
                   Forgot password?
                 </a>
               </div>
 
-              {/* Submit Button */}
+              {/* Submit */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium rounded-lg transition-all flex items-center justify-center gap-2"
-              >
+                className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-medium rounded-lg transition-all flex items-center justify-center gap-2">
                 {isLoading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -241,11 +262,10 @@ const Login = () => {
 
             {/* Sign Up Link */}
             <p className="text-center text-slate-600 text-sm">
-              Don't have an account?{' '}
+              Don't have an account?{" "}
               <a
                 href="/auth"
-                className="text-green-600 hover:text-green-700 font-medium"
-              >
+                className="text-green-600 hover:text-green-700 font-medium">
                 Sign up
               </a>
             </p>
@@ -253,10 +273,14 @@ const Login = () => {
 
           {/* Footer */}
           <p className="text-center text-slate-500 text-xs mt-8">
-            By signing in, you agree to Farmart's{' '}
-            <a href="#" className="text-green-600 hover:underline">Terms of Service</a>
-            {' '}and{' '}
-            <a href="#" className="text-green-600 hover:underline">Privacy Policy</a>
+            By signing in, you agree to Farmart's{" "}
+            <a href="#" className="text-green-600 hover:underline">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="#" className="text-green-600 hover:underline">
+              Privacy Policy
+            </a>
           </p>
         </div>
       </div>
@@ -265,4 +289,3 @@ const Login = () => {
 };
 
 export default Login;
-

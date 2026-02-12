@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import api from "../api/axios";
+import toast from "react-hot-toast";
 import {
   DollarSign,
   Users,
@@ -160,6 +162,94 @@ const ActivityItem = ({ activity }) => (
 );
 
 const AdminDashboard = () => {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const response = await api.get("/admin/stats");
+      setStats(response.data);
+    } catch (error) {
+      toast.error("Failed to load statistics");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-slate-400 mt-4">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const kpiData = [
+    {
+      title: "Total Users",
+      value: stats?.total_users || 0,
+      change: "+12.5%",
+      positive: true,
+      icon: Users,
+      color: "bg-blue-600",
+    },
+    {
+      title: "Active Farmers",
+      value: stats?.total_farmers || 0,
+      change: "+8.2%",
+      positive: true,
+      icon: Users,
+      color: "bg-green-600",
+    },
+    {
+      title: "Total Buyers",
+      value: stats?.total_buyers || 0,
+      change: "+15.3%",
+      positive: true,
+      icon: UserPlus,
+      color: "bg-purple-600",
+    },
+    {
+      title: "Open Disputes",
+      value: stats?.open_disputes || 0,
+      change: stats?.open_disputes > 0 ? `${stats.open_disputes}` : "0",
+      positive: stats?.open_disputes === 0,
+      icon: AlertTriangle,
+      color: "bg-red-600",
+    },
+  ];
+
+  const orderStats = [
+    {
+      title: "Total Orders",
+      value: stats?.total_orders || 0,
+      icon: ShoppingCart,
+      color: "text-blue-500",
+      bg: "bg-blue-100",
+    },
+    {
+      title: "Pending Orders",
+      value: stats?.pending_orders || 0,
+      icon: Clock,
+      color: "text-amber-500",
+      bg: "bg-amber-100",
+    },
+    {
+      title: "Completed Orders",
+      value: stats?.completed_orders || 0,
+      icon: CheckCircle,
+      color: "text-green-500",
+      bg: "bg-green-100",
+    },
+  ];
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -182,138 +272,44 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Signup Trend Chart */}
-        <div className="lg:col-span-2 bg-slate-800 rounded-xl p-6 border border-slate-700">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-lg font-semibold text-white">New User Signups</h3>
-              <p className="text-slate-400 text-sm">Last 30 days</p>
+      {/* Livestock & Orders Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Livestock Stats */}
+        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <h3 className="text-lg font-semibold text-white mb-4">Livestock Overview</h3>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Total Livestock</span>
+              <span className="text-2xl font-bold text-white">{stats?.total_livestock || 0}</span>
             </div>
-            <select className="bg-slate-700 border-none text-slate-300 text-sm rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500">
-              <option>Last 30 days</option>
-              <option>Last 7 days</option>
-              <option>Last 90 days</option>
-            </select>
-          </div>
-          <div className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={signupTrendData}>
-                <defs>
-                  <linearGradient id="signupGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1e293b",
-                    border: "1px solid #334155",
-                    borderRadius: "8px",
-                  }}
-                  labelStyle={{ color: "#e2e8f0" }}
-                  formatter={(value) => [value, "Signups"]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="signups"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  fill="url(#signupGradient)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400">Available</span>
+              <span className="text-xl font-semibold text-green-500">{stats?.available_livestock || 0}</span>
+            </div>
+            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-green-500 rounded-full transition-all"
+                style={{ width: `${stats?.total_livestock > 0 ? (stats?.available_livestock / stats?.total_livestock * 100) : 0}%` }}
+              ></div>
+            </div>
           </div>
         </div>
 
-        {/* Recent Activity Feed */}
+        {/* Order Stats */}
         <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Recent Activity</h3>
-            <button className="text-blue-400 hover:text-blue-300 text-sm font-medium">
-              View All
-            </button>
-          </div>
-          <div className="space-y-1">
-            {recentActivity.map((activity) => (
-              <ActivityItem key={activity.id} activity={activity} />
+          <h3 className="text-lg font-semibold text-white mb-4">Order Statistics</h3>
+          <div className="space-y-3">
+            {orderStats.map((stat, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 ${stat.bg} rounded-lg flex items-center justify-center`}>
+                    <stat.icon size={18} className={stat.color} />
+                  </div>
+                  <span className="text-slate-300">{stat.title}</span>
+                </div>
+                <span className="text-xl font-bold text-white">{stat.value}</span>
+              </div>
             ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Commission Stats */}
-        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <DollarSign size={20} className="text-green-600" />
-            </div>
-            <div>
-              <p className="text-slate-400 text-sm">Platform Commission</p>
-              <p className="text-xl font-bold text-white">KES 240,500</p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-400">This Month</span>
-              <span className="text-white font-medium">KES 48,200</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-400">Pending Payouts</span>
-              <span className="text-amber-500 font-medium">KES 12,300</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Dispute Stats */}
-        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-              <AlertTriangle size={20} className="text-red-600" />
-            </div>
-            <div>
-              <p className="text-slate-400 text-sm">Dispute Resolution</p>
-              <p className="text-xl font-bold text-white">87% Rate</p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-400">Resolved (30d)</span>
-              <span className="text-green-500 font-medium">13</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-400">Avg. Resolution Time</span>
-              <span className="text-white font-medium">2.4 days</span>
-            </div>
-          </div>
-        </div>
-
-        {/* User Growth */}
-        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <TrendingUp size={20} className="text-blue-600" />
-            </div>
-            <div>
-              <p className="text-slate-400 text-sm">User Growth</p>
-              <p className="text-xl font-bold text-white">+24.5%</p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-400">New Farmers (30d)</span>
-              <span className="text-white font-medium">+89</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-400">New Buyers (30d)</span>
-              <span className="text-white font-medium">+156</span>
-            </div>
           </div>
         </div>
       </div>
