@@ -58,7 +58,13 @@ function BuyerOrders() {
       }
 
       const response = await api.get("/orders/");
+
+      // Correctly extract orders array from response
+      const ordersData = response.data?.orders || response.data || [];
+      setOrders(Array.isArray(ordersData) ? ordersData : []);
+
       setOrders(response.data.orders || []);
+
     } catch (err) {
       console.error('Error fetching orders:', err);
       if (!isSilent) {
