@@ -171,21 +171,39 @@ const Checkout = () => {
       try {
         attempts++;
         const response = await api.get(`/orders/poll-status/${id}`);
-        const { status } = response.data;
+        const { status, payment_status } = response.data;
 
-        if (["paid", "completed", "delivered"].includes(status)) {
+        console.log(
+          "Poll attempt",
+          attempts,
+          "- Status:",
+          status,
+          "- Payment_status:",
+          payment_status,
+        );
+
+        // Check both status and payment_status for "paid"
+        if (
+          status === "paid" ||
+          payment_status === "paid" ||
+          ["completed", "delivered"].includes(status)
+        ) {
           clearInterval(interval);
           setIsWaitingForMpesa(false);
           setSubmitting(false);
           toast.success("Payment confirmed successfully!", { id: toastId });
           if (!bargainOrder) dispatch(clearCart());
           navigate(`/order-confirmation/${id}`);
-        } else if (status === "failed" || attempts >= maxAttempts) {
+        } else if (
+          status === "failed" ||
+          payment_status === "failed" ||
+          attempts >= maxAttempts
+        ) {
           clearInterval(interval);
           setIsWaitingForMpesa(false);
           setSubmitting(false);
           toast.error(
-            status === "failed"
+            status === "failed" || payment_status === "failed"
               ? "Payment failed. Please try again."
               : "We haven't received the payment confirmation yet. Please check your orders later.",
             { id: toastId },
