@@ -14,57 +14,12 @@ import {
   Check,
   Loader2,
   Smartphone,
-  ShoppingCart,
+  ShieldCheck,
+  Package,
 } from "lucide-react";
 
 const KENYAN_COUNTIES = [
-  "Mombasa",
-  "Kwale",
-  "Kilifi",
-  "Tana River",
-  "Lamu",
-  "Taita/Taveta",
-  "Garissa",
-  "Wajir",
-  "Mandera",
-  "Marsabit",
-  "Isiolo",
-  "Meru",
-  "Tharaka-Nithi",
-  "Embu",
-  "Kitui",
-  "Machakos",
-  "Makueni",
-  "Nyandarua",
-  "Nyeri",
-  "Kirinyaga",
-  "Murang'a",
-  "Kiambu",
-  "Turkana",
-  "West Pokot",
-  "Samburu",
-  "Trans Nzoia",
-  "Uasin Gishu",
-  "Elgeyo/Marakwet",
-  "Nandi",
-  "Baringo",
-  "Laikipia",
-  "Nakuru",
-  "Narok",
-  "Kajiado",
-  "Kericho",
-  "Bomet",
-  "Kakamega",
-  "Vihiga",
-  "Bungoma",
-  "Busia",
-  "Siaya",
-  "Kisumu",
-  "Homa Bay",
-  "Migori",
-  "Kisii",
-  "Nyamira",
-  "Nairobi City",
+  "Mombasa", "Kwale", "Kilifi", "Tana River", "Lamu", "Taita/Taveta", "Garissa", "Wajir", "Mandera", "Marsabit", "Isiolo", "Meru", "Tharaka-Nithi", "Embu", "Kitui", "Machakos", "Makueni", "Nyandarua", "Nyeri", "Kirinyaga", "Murang'a", "Kiambu", "Turkana", "West Pokot", "Samburu", "Trans Nzoia", "Uasin Gishu", "Elgeyo/Marakwet", "Nandi", "Baringo", "Laikipia", "Nakuru", "Narok", "Kajiado", "Kericho", "Bomet", "Kakamega", "Vihiga", "Bungoma", "Busia", "Siaya", "Kisumu", "Homa Bay", "Migori", "Kisii", "Nyamira", "Nairobi City",
 ];
 
 const Checkout = () => {
@@ -165,7 +120,7 @@ const Checkout = () => {
 
   const pollPaymentStatus = async (id, toastId) => {
     let attempts = 0;
-    const maxAttempts = 20; // ~1 minute of polling
+    const maxAttempts = 20;
 
     const interval = setInterval(async () => {
       try {
@@ -173,16 +128,6 @@ const Checkout = () => {
         const response = await api.get(`/orders/poll-status/${id}`);
         const { status, payment_status } = response.data;
 
-        console.log(
-          "Poll attempt",
-          attempts,
-          "- Status:",
-          status,
-          "- Payment_status:",
-          payment_status,
-        );
-
-        // Check both status and payment_status for "paid"
         if (
           status === "paid" ||
           payment_status === "paid" ||
@@ -205,10 +150,9 @@ const Checkout = () => {
           toast.error(
             status === "failed" || payment_status === "failed"
               ? "Payment failed. Please try again."
-              : "We haven't received the payment confirmation yet. Please check your orders later.",
+              : "Wait time exceeded. Checking status...",
             { id: toastId },
           );
-          // Redirect to orders anyway so they can see the pending status
           navigate("/dashboard/orders");
         }
       } catch (error) {
@@ -249,21 +193,16 @@ const Checkout = () => {
         setIsWaitingForMpesa(true);
         toast.loading("Sending M-Pesa prompt...", { id: loadingToastId });
 
-        // Trigger STK Push
         try {
-          const stkResponse = await api.post("/payments/stk-push", {
+          await api.post("/payments/stk-push", {
             phone_number: formData.phone,
             total_amount: grandTotal,
             items: orderPayload.items,
-            order_id: currentOrderId, // Link to the order
+            order_id: currentOrderId,
           });
-          console.log("STK Push initiated:", stkResponse.data);
         } catch (stkError) {
           console.error("STK Push failed:", stkError);
-          // Continue polling anyway - the order is created
         }
-
-        // This triggers your polling logic to wait for the Ngrok/Render callback
         await pollPaymentStatus(currentOrderId, loadingToastId);
       } else {
         toast.success("Order placed successfully!", { id: loadingToastId });
@@ -280,186 +219,201 @@ const Checkout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
+    <div className="min-h-screen bg-white text-slate-800 py-12 px-4 sm:px-6 transition-all duration-300">
+      {/* M-PESA OVERLAY */}
       {isWaitingForMpesa && (
-        <div className="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
-            <Smartphone className="w-12 h-12 text-green-600 animate-bounce mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2 dark:text-white">
-              Processing Payment
-            </h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-6">
-              Please enter your M-Pesa PIN on the prompt sent to{" "}
-              <strong>{formData.phone}</strong>
+        <div className="fixed inset-0 z-50 bg-green-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-10 max-w-sm w-full text-center shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-green-100">
+            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Smartphone className="w-10 h-10 text-green-600 animate-pulse" />
+            </div>
+            <h3 className="text-2xl font-bold text-green-900 mb-2">Check Your Phone</h3>
+            <p className="text-slate-500 mb-8">
+              Enter M-Pesa PIN for the prompt sent to <span className="font-bold text-green-700">{formData.phone}</span>
             </p>
-            <div className="flex items-center justify-center gap-2 text-green-600">
-              <Loader2 className="animate-spin" size={20} />
-              <span className="font-medium">Waiting for confirmation...</span>
+            <div className="flex items-center justify-center gap-2 py-3 px-6 bg-green-600 rounded-xl text-white font-bold text-sm">
+              <Loader2 className="animate-spin" size={18} />
+              <span>Verifying Transaction...</span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
+      <div className="max-w-6xl mx-auto">
+        {/* HEADER */}
+        <div className="flex items-center gap-4 mb-10 border-b border-slate-100 pb-8">
           <Link
             to={bargainOrder ? "/dashboard/orders" : "/cart"}
-            className="text-slate-600 dark:text-slate-400 hover:text-slate-900">
+            className="p-2 rounded-full hover:bg-green-50 text-green-700 transition-colors"
+          >
             <ArrowLeft size={24} />
           </Link>
-          <h1 className="text-2xl font-bold dark:text-white">Checkout</h1>
+          <div>
+            <h1 className="text-3xl font-black text-green-900 uppercase tracking-tight">Checkout</h1>
+            <p className="text-slate-400 text-sm font-medium">Safe & Secure Livestock Procurement</p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form Section */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm p-6 space-y-4 border dark:border-slate-800">
-              <div className="flex items-center gap-2 pb-2 border-b dark:border-slate-800">
-                <MapPin className="text-green-600" size={20} />
-                <h2 className="font-bold dark:text-white">Shipping Details</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          {/* FORM AREA */}
+          <div className="lg:col-span-8 space-y-8">
+            <section className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="p-2 bg-green-600 rounded-lg text-white">
+                  <MapPin size={20} />
+                </div>
+                <h2 className="text-xl font-bold text-slate-800 tracking-tight">Delivery Details</h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
-                  <label className="text-sm font-semibold dark:text-slate-300">
-                    M-Pesa Number *
-                  </label>
+                  <label className="block text-xs font-bold text-green-700 uppercase tracking-widest mb-2">M-Pesa Phone Number</label>
                   <input
                     type="tel"
                     name="phone"
                     placeholder="07XXXXXXXX"
                     value={formData.phone}
                     onChange={handleChange}
-                    className={`w-full mt-1 p-3 border rounded-lg bg-transparent dark:text-white focus:ring-2 focus:ring-green-500 outline-none ${errors.phone ? "border-red-500" : "border-slate-200 dark:border-slate-700"}`}
+                    className={`w-full bg-slate-50 border-2 px-4 py-4 rounded-2xl text-slate-900 focus:ring-4 focus:ring-green-500/10 outline-none transition-all ${errors.phone ? "border-red-300" : "border-slate-100 focus:border-green-600"}`}
                   />
-                  {errors.phone && (
-                    <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
-                  )}
+                  {errors.phone && <p className="text-red-500 text-xs font-bold mt-2">{errors.phone}</p>}
                 </div>
-                <div>
-                  <label className="text-sm font-semibold dark:text-slate-300">
-                    Full Name *
-                  </label>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Recipient Name</label>
                   <input
                     type="text"
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleChange}
-                    className="w-full mt-1 p-3 border rounded-lg dark:border-slate-700 bg-transparent dark:text-white outline-none"
+                    className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl focus:border-green-600 outline-none transition-all"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-semibold dark:text-slate-300">
-                    Email *
-                  </label>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Email Address</label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full mt-1 p-3 border rounded-lg dark:border-slate-700 bg-transparent dark:text-white outline-none"
+                    className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl focus:border-green-600 outline-none transition-all"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-semibold dark:text-slate-300">
-                    County *
-                  </label>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">County</label>
                   <select
                     name="county"
                     value={formData.county}
                     onChange={handleChange}
-                    className="w-full mt-1 p-3 border rounded-lg dark:border-slate-700 bg-transparent dark:text-white outline-none">
-                    <option value="" className="dark:bg-slate-900">
-                      Select County
-                    </option>
+                    className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl focus:border-green-600 outline-none transition-all cursor-pointer"
+                  >
+                    <option value="">Select County</option>
                     {KENYAN_COUNTIES.map((c) => (
-                      <option key={c} value={c} className="dark:bg-slate-900">
-                        {c}
-                      </option>
+                      <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="text-sm font-semibold dark:text-slate-300">
-                    Town/Area *
-                  </label>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">Town / Village</label>
                   <input
                     type="text"
                     name="town"
                     value={formData.town}
                     onChange={handleChange}
-                    className="w-full mt-1 p-3 border rounded-lg dark:border-slate-700 bg-transparent dark:text-white outline-none"
+                    className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-2xl focus:border-green-600 outline-none transition-all"
                   />
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm p-6 border dark:border-slate-800">
-              <div className="flex items-center gap-2 mb-4">
-                <CreditCard className="text-green-600" size={20} />
-                <h2 className="font-bold dark:text-white">Payment Method</h2>
+            <section className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-green-600 rounded-lg text-white">
+                  <CreditCard size={20} />
+                </div>
+                <h2 className="text-xl font-bold text-slate-800 tracking-tight">Payment Selection</h2>
               </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
                   type="button"
-                  onClick={() =>
-                    setFormData({ ...formData, paymentMethod: "mpesa" })
-                  }
-                  className={`p-4 border-2 rounded-xl text-left transition-all ${formData.paymentMethod === "mpesa" ? "border-green-600 bg-green-50 dark:bg-green-900/20" : "border-slate-100 dark:border-slate-800"}`}>
-                  <p className="font-bold dark:text-white">M-Pesa STK Push</p>
-                  <p className="text-xs text-slate-500">
-                    Pay securely via phone
-                  </p>
+                  onClick={() => setFormData({ ...formData, paymentMethod: "mpesa" })}
+                  className={`p-6 border-2 rounded-2xl text-left transition-all ${formData.paymentMethod === "mpesa" ? "border-green-600 bg-green-50" : "border-slate-100 bg-white hover:border-slate-200"}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-black text-green-900">M-PESA</span>
+                    {formData.paymentMethod === "mpesa" && <Check className="text-green-600" size={18} />}
+                  </div>
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-tight">Immediate Mobile Payment</p>
                 </button>
+
                 <button
                   type="button"
-                  onClick={() =>
-                    setFormData({ ...formData, paymentMethod: "cod" })
-                  }
-                  className={`p-4 border-2 rounded-xl text-left transition-all ${formData.paymentMethod === "cod" ? "border-green-600 bg-green-50 dark:bg-green-900/20" : "border-slate-100 dark:border-slate-800"}`}>
-                  <p className="font-bold dark:text-white">Cash on Delivery</p>
-                  <p className="text-xs text-slate-500">Pay when you receive</p>
+                  onClick={() => setFormData({ ...formData, paymentMethod: "cod" })}
+                  className={`p-6 border-2 rounded-2xl text-left transition-all ${formData.paymentMethod === "cod" ? "border-green-600 bg-green-50" : "border-slate-100 bg-white hover:border-slate-200"}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-black text-slate-700">C.O.D</span>
+                    {formData.paymentMethod === "cod" && <Check className="text-green-600" size={18} />}
+                  </div>
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-tight">Pay at Delivery point</p>
                 </button>
               </div>
-            </div>
+            </section>
           </div>
 
-          {/* Summary Section */}
-          <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-md p-6 sticky top-24 border dark:border-slate-800">
-              <h2 className="font-black text-slate-900 dark:text-white mb-4 uppercase tracking-wider">
-                Summary
-              </h2>
-              <div className="space-y-3 pb-4 border-b dark:border-slate-800">
-                <div className="flex justify-between dark:text-slate-300">
-                  <span>Subtotal</span>
-                  <span className="font-bold">{formatPrice(baseTotal)}</span>
+          {/* SIDEBAR SUMMARY */}
+          <div className="lg:col-span-4">
+            <div className="bg-green-900 rounded-[2.5rem] p-8 sticky top-24 text-white shadow-2xl overflow-hidden relative">
+              {/* Decorative Circle */}
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-green-800 rounded-full opacity-50"></div>
+              
+              <h2 className="text-xs font-black text-green-400 uppercase tracking-[0.2em] mb-8 relative z-10">Purchase Summary</h2>
+              
+              <div className="space-y-4 mb-8 relative z-10">
+                <div className="flex justify-between items-center">
+                  <span className="text-green-200 font-medium">Subtotal</span>
+                  <span className="font-bold text-lg tracking-tight">{formatPrice(baseTotal)}</span>
                 </div>
-                <div className="flex justify-between dark:text-slate-300">
-                  <span>Shipping</span>
-                  <span className="font-bold">{formatPrice(shippingCost)}</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-green-200 font-medium">Shipping</span>
+                  <span className="font-bold text-lg tracking-tight">
+                    {shippingCost === 0 ? "FREE" : formatPrice(shippingCost)}
+                  </span>
                 </div>
               </div>
-              <div className="pt-4 flex justify-between items-end">
-                <span className="text-sm font-bold text-slate-500 uppercase">
-                  Total
-                </span>
-                <span className="text-2xl font-black text-green-700 dark:text-green-500 leading-none">
+
+              <div className="border-t border-green-800 pt-6 mb-10 relative z-10">
+                <span className="text-xs font-bold text-green-400 uppercase tracking-widest block mb-1">Grand Total</span>
+                <span className="text-4xl font-black tracking-tighter">
                   {formatPrice(grandTotal)}
                 </span>
               </div>
+
               <button
                 onClick={handlePlaceOrder}
                 disabled={submitting}
-                className="w-full mt-8 py-4 bg-slate-900 dark:bg-green-600 text-white rounded-xl font-black uppercase hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-3 transition-all">
+                className="w-full py-5 bg-white text-green-900 rounded-2xl font-black uppercase tracking-widest hover:bg-green-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50 relative z-10 shadow-lg"
+              >
                 {submitting ? (
                   <Loader2 className="animate-spin" />
                 ) : (
-                  <Check size={20} />
+                  <>
+                    <ShieldCheck size={20} />
+                    <span>{formData.paymentMethod === "mpesa" ? "Pay Now" : "Confirm Order"}</span>
+                  </>
                 )}
-                {formData.paymentMethod === "mpesa"
-                  ? "Complete Payment"
-                  : "Confirm Order"}
               </button>
+
+              <div className="mt-8 flex items-center gap-3 text-green-300 relative z-10">
+                <Package size={16} />
+                <p className="text-[10px] font-bold uppercase tracking-widest leading-relaxed">
+                  Verified Animal Health & Logistics Included
+                </p>
+              </div>
             </div>
           </div>
         </div>
