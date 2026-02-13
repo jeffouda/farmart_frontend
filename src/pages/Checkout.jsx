@@ -249,6 +249,20 @@ const Checkout = () => {
         setIsWaitingForMpesa(true);
         toast.loading("Sending M-Pesa prompt...", { id: loadingToastId });
 
+        // Trigger STK Push
+        try {
+          const stkResponse = await api.post("/payments/stk-push", {
+            phone_number: formData.phone,
+            total_amount: grandTotal,
+            items: orderPayload.items,
+            order_id: currentOrderId, // Link to the order
+          });
+          console.log("STK Push initiated:", stkResponse.data);
+        } catch (stkError) {
+          console.error("STK Push failed:", stkError);
+          // Continue polling anyway - the order is created
+        }
+
         // This triggers your polling logic to wait for the Ngrok/Render callback
         await pollPaymentStatus(currentOrderId, loadingToastId);
       } else {
