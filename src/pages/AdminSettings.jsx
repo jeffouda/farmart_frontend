@@ -9,7 +9,7 @@ function AdminSettings() {
 
   const [profile, setProfile] = useState({
     fullName: 'Admin User',
-    email: 'admin@farmart.com',
+    email: 'admin1@farmart.com',
   });
 
   const [passwords, setPasswords] = useState({
