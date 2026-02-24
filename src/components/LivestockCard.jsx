@@ -172,10 +172,19 @@ const LivestockCard = ({ animal, onQuantityUpdate, isOwner = false }) => {
           {animal.location && <span className="truncate">{animal.location}</span>}
         </div>
 
-        {/* Price */}
-        <p className="text-xl font-bold text-green-600 mt-2">
-          {formatPrice(animal.price || 0)}
-        </p>
+        {/* Price and Quantity */}
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xl font-bold text-green-600">
+            {formatPrice(animal.price || 0)}
+          </p>
+          {/* Quantity Badge - visible to everyone */}
+          {quantity > 0 && (
+            <span className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+              <Package size={12} />
+              {quantity} available
+            </span>
+          )}
+        </div>
 
         {/* Quantity Controls (for owner) */}
         {isOwner && quantity > 1 && (
