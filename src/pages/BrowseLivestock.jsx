@@ -71,7 +71,9 @@ function BrowseLivestock() {
       params.append('sort', sortBy);
 
       const response = await api.get(`/livestock?${params.toString()}`);
-      setLivestock(response.data.animals || response.data || []);
+      const animals = response.data.animals || response.data || [];
+      console.log('🐄 First animal data:', animals[0]); // Debug log
+      setLivestock(animals);
     } catch (error) {
       console.error('Failed to fetch livestock:', error);
       setError('Failed to load livestock. Please try again.');
