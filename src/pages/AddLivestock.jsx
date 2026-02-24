@@ -9,6 +9,7 @@ import {
   Tag,
   FileText,
   CheckCircle,
+  Package,
 } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
@@ -24,6 +25,7 @@ const AddLivestock = () => {
     ageUnit: "years",
     weight: "",
     price: "",
+    quantity: 1,
     description: "",
     gender: "male",
     health_history: "",
@@ -136,6 +138,7 @@ const [errors, setErrors] = useState({});
       data.append("ageUnit", formData.ageUnit);
       data.append("weight", formData.weight);
       data.append("price", formData.price);
+      data.append("quantity", formData.quantity);
       data.append("description", formData.description);
       data.append("gender", formData.gender);
       data.append("health_history", formData.health_history);
@@ -296,6 +299,32 @@ const [errors, setErrors] = useState({});
               )}
             </div>
 
+            {/* Quantity Input */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Quantity <span className="text-slate-400">(How many available)</span>
+              </label>
+              <div className="relative">
+                <Package
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
+                <input
+                  type="number"
+                  name="quantity"
+                  value={formData.quantity}
+                  onChange={handleInputChange}
+                  placeholder="1"
+                  min="1"
+                  max="50"
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                />
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Add up to 50 animals of the same type
+              </p>
+            </div>
+
             {/* Gender Selection */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -443,6 +472,12 @@ const [errors, setErrors] = useState({});
                   <span className="text-slate-500">Breed</span>
                   <span className="font-medium text-slate-900">
                     {formData.breed || "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Quantity</span>
+                  <span className="font-medium text-slate-900">
+                    {formData.quantity || "1"}
                   </span>
                 </div>
                 <div className="flex justify-between">

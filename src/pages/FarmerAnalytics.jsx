@@ -80,7 +80,7 @@ const FarmerAnalytics = () => {
       setLoading(true);
       try {
         // Try to fetch from dedicated analytics endpoint
-        const response = await api.get("/analytics/dashboard");
+        const response = await api.get("/analytics/farmer");
         const data = response.data;
 
         // Set metrics directly from backend
@@ -110,7 +110,7 @@ const FarmerAnalytics = () => {
         console.warn("Analytics endpoint not available, using fallback:", error?.message);
         // Fallback to calculating from orders/reviews endpoints
         const [ordersRes, reviewsRes] = await Promise.allSettled([
-          api.get("/orders/my-sales"),
+          api.get("/orders"),
           api.get("/reviews"),
         ]);
 

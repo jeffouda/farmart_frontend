@@ -73,8 +73,8 @@ const NegotiationRoom = () => {
   
   const isMyTurn = () => {
     if (!session || !currentUser) return false;
-    if (!session.last_offer_by) return true;
-    return session.last_offer_by !== currentUser.id;
+    // Can act if session is pending or counter and user is the buyer
+    return session.status === 'pending' || session.status === 'counter';
   };
 
   const handleSendMessage = async (e) => {
@@ -93,8 +93,7 @@ const NegotiationRoom = () => {
 
     try {
       await api.post('/bargain/sessions/' + sessionId + '/messages', {
-        content: tempMsg.content,
-        sender_id: currentUser?.id
+        message: tempMsg.content
       });
       const res = await api.get('/bargain/sessions/' + sessionId);
       setMessages(Array.isArray(res.data.messages) ? res.data.messages : []);
@@ -168,7 +167,7 @@ const NegotiationRoom = () => {
     );
   }
 
-  const canAct = session.status === 'active' && isMyTurn();
+  const canAct = (session.status === 'pending' || session.status === 'counter') && isMyTurn();
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
@@ -185,7 +184,7 @@ const NegotiationRoom = () => {
               Negotiation #{sessionId}
             </h1>
             <div className="flex items-center gap-2 text-xs mt-1">
-              {session.status === 'active' ? (
+              {session.status === 'pending' || session.status === 'counter' ? (
                 <span className="flex items-center gap-1 text-green-600 font-medium">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -208,7 +207,7 @@ const NegotiationRoom = () => {
         <div className="text-right">
           <p className="text-xs text-gray-500 uppercase font-bold">Current Offer</p>
           <p className="text-xl font-bold text-green-600">
-            KES {session.current_price ? session.current_price.toLocaleString() : '---'}
+            KES {session.initial_offer ? session.initial_offer.toLocaleString() : '---'}
           </p>
         </div>
       </div>
@@ -271,7 +270,7 @@ const NegotiationRoom = () => {
           </button>
         </form>
 
-        {session.status === 'active' && currentUser && (
+        {session.status === 'pending' || session.status === 'counter' ? (
           canAct() ? (
             <div className="grid grid-cols-3 gap-2">
               <button
@@ -298,9 +297,7 @@ const NegotiationRoom = () => {
               Waiting for counter-offer...
             </div>
           )
-        )}
-
-        {session.status !== 'active' && (
+        ) : (
           <div className="text-center p-3 bg-gray-100 rounded-lg text-gray-600 text-sm font-medium">
             {session.status === 'accepted' 
               ? 'Deal agreed!' 
@@ -310,7 +307,17 @@ const NegotiationRoom = () => {
           </div>
         )}
 
-        {!currentUser && session.status === 'active' && (
+        {session.status !== 'pending' && session.status !== 'counter' && (
+          <div className="text-center p-3 bg-gray-100 rounded-lg text-gray-600 text-sm font-medium">
+            {session.status === 'accepted' 
+              ? 'Deal agreed!' 
+              : session.status === 'rejected' 
+                ? 'Negotiation rejected' 
+                : 'Session closed'}
+          </div>
+        )}
+
+        {!currentUser && (session.status === 'pending' || session.status === 'counter') && (
           <div className="text-center p-2 bg-gray-50 rounded text-xs text-gray-500">
             Guest Mode - Log in to participate
           </div>

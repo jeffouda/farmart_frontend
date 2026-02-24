@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Heart, MapPin, Filter, Star, ShoppingCart, Loader2 } from 'lucide-react';
+import { Search, Heart, MapPin, Filter, Star, ShoppingCart, Loader2, Package } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../redux/cartSlice';
 import { addToWishlist, removeFromWishlist, optimisticAddToWishlist, optimisticRemoveFromWishlist } from '../redux/wishlistSlice';
@@ -364,6 +364,18 @@ function BrowseLivestock() {
                     {animal.species && (
                       <div className="absolute bottom-4 left-4 px-3 py-1 bg-green-600 text-white text-xs font-black uppercase tracking-wider rounded-lg">
                         {animal.species}
+                      </div>
+                    )}
+                    {/* Quantity Badge */}
+                    {(animal.quantity > 1) && (
+                      <div className="absolute bottom-4 left-28 px-3 py-1 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-lg flex items-center gap-1">
+                        <Package size={12} />
+                        <span>{animal.quantity} available</span>
+                      </div>
+                    )}
+                    {animal.quantity === 1 && (
+                      <div className="absolute bottom-4 left-28 px-3 py-1 bg-green-600 text-white text-xs font-black uppercase tracking-wider rounded-lg">
+                        In Stock
                       </div>
                     )}
                     {/* Verified Badge - Left Bottom */}

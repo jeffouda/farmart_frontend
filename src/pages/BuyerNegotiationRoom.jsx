@@ -25,7 +25,7 @@ const BuyerNegotiationRoom = () => {
     try {
       const response = await api.get(`/bargain/sessions/${id}`);
       setSession(response.data.session);
-      setMessages(response.data.session?.messages || []);
+      setMessages(response.data.messages || []);
     } catch (error) {
       console.error('Failed to fetch session:', error);
       toast.error('Failed to load negotiation');
@@ -57,7 +57,7 @@ const BuyerNegotiationRoom = () => {
 
   const handleAcceptOffer = async () => {
     try {
-      await api.put(`/bargain/sessions/${id}/accept`);
+      await api.post(`/bargain/sessions/${id}/accept`);
       toast.success('Offer accepted!');
       fetchSession();
     } catch (error) {
@@ -72,7 +72,7 @@ const BuyerNegotiationRoom = () => {
 
     try {
       await api.post(`/bargain/sessions/${id}/counter`, {
-        amount: parseFloat(amount),
+        new_price: parseFloat(amount),
         message: 'Counter offer'
       });
       toast.success('Counter offer sent!');
@@ -87,7 +87,7 @@ const BuyerNegotiationRoom = () => {
     if (!window.confirm('Are you sure you want to reject this offer?')) return;
     
     try {
-      await api.put(`/bargain/sessions/${id}/reject`);
+      await api.post(`/bargain/sessions/${id}/reject`);
       toast.success('Offer rejected');
       fetchSession();
     } catch (error) {
@@ -224,10 +224,10 @@ const BuyerNegotiationRoom = () => {
             messages.map((msg, index) => (
               <div
                 key={index}
-                className={`flex ${msg.sender_type === 'buyer' ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${msg.sender_role === 'buyer' ? 'justify-end' : 'justify-start'}`}
               >
                 <div className={`max-w-[70%] rounded-xl p-4 ${
-                  msg.sender_type === 'buyer'
+                  msg.sender_role === 'buyer'
                     ? 'bg-green-600 text-white'
                     : 'bg-gray-100 text-gray-800'
                 }`}>

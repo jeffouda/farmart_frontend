@@ -1,67 +1,137 @@
 import React, { useState, useEffect } from "react";
-import { Search, Edit3, Trash2, Plus, X, Upload, Image as ImageIcon, DollarSign, Scale, Tag } from "lucide-react";
+import { Search, Edit3, Trash2, Plus, X, Upload, Image as ImageIcon, DollarSign, Scale, Tag, Package, Minus } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
-const InventoryCard = ({ animal, onEdit, onDelete }) => (
-  <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 p-4">
-    <div className="relative rounded-2xl overflow-hidden mb-4">
-      <img 
-        src={animal.image_url || "https://placehold.co/600x400?text=No+Image"} 
-        alt={animal.breed} 
-        className="w-full h-48 object-cover" 
-      />
-      <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[10px] font-black uppercase ${
-        animal.status === 'available' 
-          ? "bg-[#D1FAE5] text-[#065F46]" 
-          : "bg-amber-100 text-amber-700"
-      }`}>
-        {animal.status}
-      </span>
-    </div>
-    <div className="space-y-4 px-2">
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="text-lg font-black text-slate-900">{animal.breed}</h3>
-          <p className="text-slate-400 text-xs font-bold">{animal.species}</p>
-        </div>
-        <p className="text-[#34A832] font-black text-lg whitespace-nowrap">
-          KES {parseFloat(animal.price || 0).toLocaleString()}
-        </p>
-      </div>
+const InventoryCard = ({ animal, onEdit, onDelete, onQuantityUpdate }) => {
+  const [quantity, setQuantity] = useState(animal.quantity || 1);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-      <div className="space-y-1 py-4 border-y border-slate-50">
-        <div className="flex justify-between text-[11px] font-bold">
-          <span className="text-slate-400 uppercase tracking-tighter">Age :</span>
-          <span className="text-slate-900">{animal.age || '-'} months</span>
-        </div>
-        <div className="flex justify-between text-[11px] font-bold">
-          <span className="text-slate-400 uppercase tracking-tighter">Weight :</span>
-          <span className="text-slate-900">{animal.weight || '-'} kg</span>
-        </div>
-        <div className="flex justify-between text-[11px] font-bold">
-          <span className="text-slate-400 uppercase tracking-tighter">Gender :</span>
-          <span className="text-slate-900 capitalize">{animal.gender || '-'}</span>
-        </div>
-      </div>
+  const handleDecrement = async () => {
+    if (quantity <= 1 || isUpdating) return;
+    
+    setIsUpdating(true);
+    const newQuantity = quantity - 1;
+    
+    try {
+      await api.post('/livestock/update-quantity', {
+        animal_id: animal.id,
+        decrement_by: 1
+      });
+      
+      setQuantity(newQuantity);
+      toast.success(`Quantity updated to ${newQuantity}`);
+      onQuantityUpdate?.(animal.id, newQuantity);
+      
+      if (newQuantity === 0) {
+        toast.success('All livestock sold!');
+      }
+    } catch (error) {
+      console.error('Failed to update quantity:', error);
+      toast.error('Failed to update quantity');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
-      <div className="flex gap-2">
-        <button 
-          onClick={() => onEdit(animal)}
-          className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-xs transition-colors"
-        >
-          <Edit3 size={14} /> Edit
-        </button>
-        <button 
-          onClick={() => onDelete(animal.id)}
-          className="bg-pink-50 hover:bg-pink-100 text-pink-600 p-3 rounded-xl transition-colors"
-        >
-          <Trash2 size={18} />
-        </button>
+  // Don't render if quantity is 0
+  if (quantity <= 0) {
+    return null;
+  }
+
+  return (
+    <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 p-4">
+      <div className="relative rounded-2xl overflow-hidden mb-4">
+        <img 
+          src={animal.image_url || "https://placehold.co/600x400?text=No+Image"} 
+          alt={animal.breed} 
+          className="w-full h-48 object-cover" 
+        />
+        <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+          animal.status === 'available' 
+            ? "bg-[#D1FAE5] text-[#065F46]" 
+            : "bg-amber-100 text-amber-700"
+        }`}>
+          {animal.status}
+        </span>
+        
+        {/* Quantity Badge */}
+        {quantity > 1 && (
+          <div className="absolute top-3 left-3 px-3 py-1 bg-blue-600 text-white rounded-full text-[10px] font-black uppercase flex items-center gap-1">
+            <Package size={12} />
+            {quantity} available
+          </div>
+        )}
+      </div>
+      
+      <div className="space-y-4 px-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="text-lg font-black text-slate-900">{animal.breed}</h3>
+            <p className="text-slate-400 text-xs font-bold">{animal.species}</p>
+          </div>
+          <p className="text-[#34A832] font-black text-lg whitespace-nowrap">
+            KES {parseFloat(animal.price || 0).toLocaleString()}
+          </p>
+        </div>
+
+        <div className="space-y-1 py-4 border-y border-slate-50">
+          <div className="flex justify-between text-[11px] font-bold">
+            <span className="text-slate-400 uppercase tracking-tighter">Age :</span>
+            <span className="text-slate-900">{animal.age || '-'} months</span>
+          </div>
+          <div className="flex justify-between text-[11px] font-bold">
+            <span className="text-slate-400 uppercase tracking-tighter">Weight :</span>
+            <span className="text-slate-900">{animal.weight || '-'} kg</span>
+          </div>
+          <div className="flex justify-between text-[11px] font-bold">
+            <span className="text-slate-400 uppercase tracking-tighter">Gender :</span>
+            <span className="text-slate-900 capitalize">{animal.gender || '-'}</span>
+          </div>
+          {quantity > 1 && (
+            <div className="flex justify-between text-[11px] font-bold">
+              <span className="text-slate-400 uppercase tracking-tighter">Quantity :</span>
+              <span className="text-blue-600">{quantity} animals</span>
+            </div>
+          )}
+        </div>
+
+        {/* Quantity Controls */}
+        {quantity > 1 && (
+          <div className="flex items-center gap-2 py-2">
+            <button
+              onClick={handleDecrement}
+              disabled={isUpdating || quantity <= 1}
+              className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 disabled:opacity-50 transition-colors"
+            >
+              <Minus size={14} />
+              <span className="text-xs font-bold">Sell 1</span>
+            </button>
+            <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
+              <Package size={12} />
+              {quantity} left
+            </span>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button 
+            onClick={() => onEdit(animal)}
+            className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-xs transition-colors"
+          >
+            <Edit3 size={14} /> Edit
+          </button>
+          <button 
+            onClick={() => onDelete(animal.id)}
+            className="bg-pink-50 hover:bg-pink-100 text-pink-600 p-3 rounded-xl transition-colors"
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const AddEditModal = ({ animal, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -70,6 +140,7 @@ const AddEditModal = ({ animal, onClose, onSuccess }) => {
     age: animal?.age?.toString() || "",
     weight: animal?.weight?.toString() || "",
     price: animal?.price?.toString() || "",
+    quantity: animal?.quantity?.toString() || "1",
     gender: animal?.gender || "male",
     health_history: animal?.health_history || "",
   });
@@ -112,6 +183,12 @@ const AddEditModal = ({ animal, onClose, onSuccess }) => {
       return;
     }
 
+    const quantity = parseInt(formData.quantity) || 1;
+    if (quantity > 50) {
+      toast.error("Maximum quantity is 50 animals per listing");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -121,6 +198,7 @@ const AddEditModal = ({ animal, onClose, onSuccess }) => {
       data.append("age", formData.age);
       data.append("weight", formData.weight);
       data.append("price", formData.price);
+      data.append("quantity", formData.quantity);
       data.append("gender", formData.gender);
       data.append("health_history", formData.health_history);
       if (imageFile) {
@@ -252,6 +330,27 @@ const AddEditModal = ({ animal, onClose, onSuccess }) => {
                   className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#34A832]"
                 />
               </div>
+            </div>
+
+            {/* Quantity */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Quantity <span className="text-slate-400">(How many)</span>
+              </label>
+              <div className="relative">
+                <Package className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <input
+                  type="number"
+                  name="quantity"
+                  value={formData.quantity}
+                  onChange={handleInputChange}
+                  placeholder="1"
+                  min="1"
+                  max="50"
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#34A832]"
+                />
+              </div>
+              <p className="text-xs text-slate-400 mt-1">Add up to 50 animals of the same type</p>
             </div>
 
             {/* Gender */}
@@ -409,6 +508,13 @@ const FarmerInventory = () => {
     fetchAnimals();
   };
 
+  const handleQuantityUpdate = (animalId, newQuantity) => {
+    if (newQuantity <= 0) {
+      // Remove animal from list
+      setAnimals(prev => prev.filter(a => a.id !== animalId));
+    }
+  };
+
   const filteredAnimals = animals.filter(animal => {
     const matchesSearch = 
       animal.breed?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -486,6 +592,7 @@ const FarmerInventory = () => {
               animal={animal}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onQuantityUpdate={handleQuantityUpdate}
             />
           ))}
         </div>
@@ -525,4 +632,3 @@ const FarmerInventory = () => {
 };
 
 export default FarmerInventory;
-
