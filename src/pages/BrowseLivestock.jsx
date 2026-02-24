@@ -360,23 +360,17 @@ function BrowseLivestock() {
                       alt={animal.breed || 'Livestock'}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    {/* Species Badge - Left */}
+                    {/* Species Badge - Bottom Left */}
                     {animal.species && (
                       <div className="absolute bottom-4 left-4 px-3 py-1 bg-green-600 text-white text-xs font-black uppercase tracking-wider rounded-lg">
                         {animal.species}
                       </div>
                     )}
-                    {/* Quantity Badge */}
+                    {/* Quantity Badge - Top Left */}
                     {animal.quantity && (
                       <div className="absolute top-4 left-4 px-3 py-1 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-lg flex items-center gap-1">
                         <Package size={12} />
                         <span>{animal.quantity} available</span>
-                      </div>
-                    )}
-                    {/* Verified Badge - Top Right */}
-                    {animal.is_verified && (
-                      <div className="absolute top-4 left-4 px-3 py-1 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-lg">
-                        Verified
                       </div>
                     )}
                     {/* Wishlist Button - Right */}
