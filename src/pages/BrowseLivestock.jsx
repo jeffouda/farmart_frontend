@@ -398,6 +398,14 @@ function BrowseLivestock() {
                       KES {animal.price?.toLocaleString() || '0'}
                     </p>
 
+                    {/* Quantity Badge */}
+                    {animal.quantity && (
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg mb-4">
+                        <Package size={16} />
+                        <span className="text-sm font-bold">{animal.quantity} available</span>
+                      </div>
+                    )}
+
                     {/* Details Row */}
                     <div className="flex items-center gap-4 text-base text-slate-500 mb-6">
                       {animal.age && <span>{animal.age} years</span>}
