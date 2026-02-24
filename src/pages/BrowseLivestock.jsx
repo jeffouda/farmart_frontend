@@ -367,20 +367,15 @@ function BrowseLivestock() {
                       </div>
                     )}
                     {/* Quantity Badge */}
-                    {(animal.quantity > 1) && (
-                      <div className="absolute bottom-4 left-28 px-3 py-1 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-lg flex items-center gap-1">
+                    {animal.quantity && (
+                      <div className="absolute top-4 left-4 px-3 py-1 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-lg flex items-center gap-1">
                         <Package size={12} />
                         <span>{animal.quantity} available</span>
                       </div>
                     )}
-                    {animal.quantity === 1 && (
-                      <div className="absolute bottom-4 left-28 px-3 py-1 bg-green-600 text-white text-xs font-black uppercase tracking-wider rounded-lg">
-                        In Stock
-                      </div>
-                    )}
-                    {/* Verified Badge - Left Bottom */}
+                    {/* Verified Badge - Top Right */}
                     {animal.is_verified && (
-                      <div className="absolute bottom-4 left-28 px-3 py-1 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-lg">
+                      <div className="absolute top-4 left-4 px-3 py-1 bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-lg">
                         Verified
                       </div>
                     )}
