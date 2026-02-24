@@ -72,7 +72,6 @@ function BrowseLivestock() {
 
       const response = await api.get(`/livestock?${params.toString()}`);
       const animals = response.data.animals || response.data || [];
-      console.log('🐄 First animal data:', animals[0]); // Debug log
       setLivestock(animals);
     } catch (error) {
       console.error('Failed to fetch livestock:', error);
