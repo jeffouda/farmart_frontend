@@ -61,8 +61,10 @@ export const NotificationProvider = ({ children }) => {
     if (!currentUser) return;
 
     try {
+      console.log('🔔 Fetching unread count for user:', currentUser.email);
       const response = await api.get('/notifications/unread-count');
       const newCount = response.data.unread_count || 0;
+      console.log('🔔 Unread count received:', newCount);
 
       // Show toast if count increased (new notification) and we're past initial load
       if (initializedRef.current && newCount > prevUnreadCountRef.current) {

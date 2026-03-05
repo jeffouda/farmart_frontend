@@ -73,7 +73,7 @@ function Navbar() {
           {/* Desktop Navigation Links - Text-based */}
           <div className="hidden lg:flex items-center gap-6">
             {/* Sell - Only for farmers */}
-            {currentUser?.role === 'farmer' && (
+            {currentUser?.role?.toLowerCase() === 'farmer' && (
               <Link
                 to="/farmer-dashboard/add"
                 className={`text-[11px] font-black uppercase tracking-widest transition-all duration-500 drop-shadow-sm ${textColor} ${hoverColor} relative group`}>
@@ -91,7 +91,7 @@ function Navbar() {
             </Link>
 
             {/* Buy - Text link to browse for buyers */}
-            {currentUser?.role === 'buyer' && (
+            {currentUser?.role?.toLowerCase() === 'buyer' && (
               <Link
                 to="/browse"
                 className={`text-[11px] font-black uppercase tracking-widest transition-all duration-500 drop-shadow-sm ${textColor} ${hoverColor} relative group`}>
@@ -120,7 +120,7 @@ function Navbar() {
           </div>
 
           {/* Buyer Icons - Heart & Cart (right side) */}
-          {currentUser?.role === 'buyer' && (
+          {currentUser?.role?.toLowerCase() === 'buyer' && (
             <div className="hidden lg:flex items-center gap-4">
               {/* Wishlist Heart */}
               <Link
@@ -196,6 +196,16 @@ function Navbar() {
                             onClick={() => {
                               markAsRead(notification.id);
                               setIsNotificationsOpen(false);
+                              
+                              // Navigate based on notification type and user role
+                              if (notification.type === 'new_negotiation' && notification.related_id) {
+                                // Navigate to negotiation page with livestock_id
+                                navigate(`/negotiation/${notification.related_id}/${currentUser.id}`);
+                              } else if (notification.type === 'new_order' && notification.related_id) {
+                                // Navigate to order details based on role (case-insensitive)
+                                const dashboardPath = currentUser?.role?.toLowerCase() === 'farmer' ? '/farmer-dashboard' : '/dashboard';
+                                navigate(`${dashboardPath}/orders`);
+                              }
                             }}
                             className={`p-4 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${
                               !notification.is_read ? 'bg-green-50' : ''
@@ -224,12 +234,15 @@ function Navbar() {
                       )}
                     </div>
                     <div className="p-3 border-t border-gray-100 bg-gray-50">
-                      <Link
-                        to="/dashboard/notifications"
-                        onClick={() => setIsNotificationsOpen(false)}
-                        className="block text-center text-sm text-green-600 hover:text-green-700 font-medium">
-                        View All Notifications
-                      </Link>
+                      <button
+                        onClick={() => {
+                          setIsNotificationsOpen(false);
+                          const dashboardPath = currentUser?.role?.toLowerCase() === 'farmer' ? '/farmer-dashboard' : '/dashboard';
+                          navigate(dashboardPath);
+                        }}
+                        className="block w-full text-center text-sm text-green-600 hover:text-green-700 font-medium">
+                        Go to Dashboard
+                      </button>
                     </div>
                   </div>
                 </>
@@ -268,14 +281,14 @@ function Navbar() {
                   {/* Dropdown Options */}
                   <div className="p-2">
                     <Link
-                      to={currentUser?.role === 'farmer' ? "/farmer-dashboard/profile" : "/dashboard/profile"}
+                      to={currentUser?.role?.toLowerCase() === 'farmer' ? "/farmer-dashboard/profile" : "/dashboard/profile"}
                       className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                     >
                       <UserCircle size={18} className="text-gray-400" />
                       My Account
                     </Link>
                     <Link
-                      to={currentUser?.role === 'farmer' ? "/farmer-dashboard" : "/dashboard"}
+                      to={currentUser?.role?.toLowerCase() === 'farmer' ? "/farmer-dashboard" : "/dashboard"}
                       className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
                     >
                       <LayoutGrid size={18} className="text-gray-400" />
@@ -321,7 +334,7 @@ function Navbar() {
         }`}>
         <div className="flex flex-col p-8 gap-4 bg-green-950">
           {/* Buyer-specific icon links */}
-          {currentUser?.role === 'buyer' && (
+          {currentUser?.role?.toLowerCase() === 'buyer' && (
             <div className="flex items-center gap-4 mb-2">
               <Link
                 to="/wishlist"
@@ -351,7 +364,7 @@ function Navbar() {
           )}
           
           {/* Text-based links */}
-          {currentUser?.role === 'buyer' && (
+          {currentUser?.role?.toLowerCase() === 'buyer' && (
             <>
               <Link
                 to="/browse"
@@ -368,7 +381,7 @@ function Navbar() {
             </>
           )}
           
-          {currentUser?.role === 'farmer' && (
+          {currentUser?.role?.toLowerCase() === 'farmer' && (
             <Link
               to="/farmer-dashboard/add"
               onClick={() => setIsMobileMenuOpen(false)}
@@ -395,7 +408,7 @@ function Navbar() {
           {currentUser ? (
             <>
               <Link
-                to={currentUser?.role === 'farmer' ? "/farmer-dashboard" : "/dashboard"}
+                to={currentUser?.role?.toLowerCase() === 'farmer' ? "/farmer-dashboard" : "/dashboard"}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="text-sm font-bold uppercase tracking-widest text-white hover:text-green-500 transition-colors">
                 Dashboard

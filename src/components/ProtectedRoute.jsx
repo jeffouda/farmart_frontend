@@ -52,7 +52,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   console.log('🔍 Role Check:', {
     userRoleRaw: userRole,
     userRoleLower,
+    allowedRoles,
     allowedRolesLower,
+    pathname: location.pathname,
     isAllowed: allowedRolesLower?.includes(userRoleLower)
   });
 

@@ -18,6 +18,7 @@ function Negotiation() {
   const [sending, setSending] = useState(false);
   const [livestock, setLivestock] = useState(null);
   const [receiverName, setReceiverName] = useState("Loading...");
+  const [actualReceiverId, setActualReceiverId] = useState(receiverId); // Track actual receiver
 
   // Scroll to bottom when messages change
   const scrollToBottom = () => {
@@ -35,6 +36,25 @@ function Negotiation() {
       setMessages(response.data.messages || []);
       setLivestock(response.data.livestock);
       setReceiverName(response.data.farmer_name || "Farmer");
+      
+      // Determine the actual receiver ID based on who the current user is
+      if (response.data.messages && response.data.messages.length > 0) {
+        // Find the other party in the conversation
+        const otherParty = response.data.messages.find(
+          msg => msg.sender_id !== currentUser?.id || msg.receiver_id !== currentUser?.id
+        );
+        
+        if (otherParty) {
+          // If current user is receiver, reply to sender; if sender, reply to receiver
+          const replyTo = otherParty.sender_id === currentUser?.id 
+            ? otherParty.receiver_id 
+            : otherParty.sender_id;
+          setActualReceiverId(replyTo);
+        }
+      } else if (!actualReceiverId) {
+        // No messages yet, use receiverId from URL
+        setActualReceiverId(receiverId);
+      }
     } catch (error) {
       console.error("Failed to fetch messages:", error);
       toast.error("Failed to load conversation");
@@ -64,9 +84,10 @@ function Negotiation() {
 
     setSending(true);
     try {
+      // Use actualReceiverId which is dynamically determined
       await api.post(`/negotiation/${livestockId}`, {
         content: newMessage.trim(),
-        receiver_id: receiverId,
+        receiver_id: actualReceiverId || receiverId,
       });
       setNewMessage("");
       fetchMessages();
