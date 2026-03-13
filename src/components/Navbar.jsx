@@ -199,8 +199,10 @@ function Navbar() {
                               
                               // Navigate based on notification type and user role
                               if (notification.type === 'new_negotiation' && notification.related_id) {
-                                // Navigate to negotiation page with livestock_id
-                                navigate(`/negotiation/${notification.related_id}/${currentUser.id}`);
+                                // Parse livestock_id:sender_id format
+                                const [livestockId, senderId] = notification.related_id.split(':');
+                                // Navigate to negotiation page with both IDs
+                                navigate(`/negotiation/${livestockId}/${senderId || currentUser.id}`);
                               } else if (notification.type === 'new_order' && notification.related_id) {
                                 // Navigate to order details based on role (case-insensitive)
                                 const dashboardPath = currentUser?.role?.toLowerCase() === 'farmer' ? '/farmer-dashboard' : '/dashboard';

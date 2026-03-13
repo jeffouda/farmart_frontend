@@ -32,7 +32,12 @@ function Negotiation() {
   // Fetch conversation history
   const fetchMessages = async () => {
     try {
-      const response = await api.get(`/negotiation/${livestockId}`);
+      // Add partner_id as query parameter to filter specific conversation
+      const url = actualReceiverId 
+        ? `/negotiation/${livestockId}?partner_id=${actualReceiverId}`
+        : `/negotiation/${livestockId}`;
+      
+      const response = await api.get(url);
       setMessages(response.data.messages || []);
       setLivestock(response.data.livestock);
       setReceiverName(response.data.farmer_name || "Farmer");
