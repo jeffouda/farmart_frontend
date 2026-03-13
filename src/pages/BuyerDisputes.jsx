@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Scale, ShieldCheck, AlertCircle, Clock, User, FileText, HelpCircle, CheckCircle, XCircle, Package, MessageSquare, Upload } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api/axios';
 import { toast } from 'react-hot-toast';
 
@@ -112,7 +112,10 @@ const ResponseModal = ({ dispute, isOpen, onClose, onSubmit }) => {
 };
 
 const BuyerDisputes = () => {
-  const [activeTab, setActiveTab] = useState('incoming'); // Default to incoming (need to respond)
+  const [searchParams] = useSearchParams();
+  const highlightDisputeId = searchParams.get('highlight');
+  
+  const [activeTab, setActiveTab] = useState('incoming');
   const [selectedDispute, setSelectedDispute] = useState(null);
   const [responseModalOpen, setResponseModalOpen] = useState(false);
   const [incomingDisputes, setIncomingDisputes] = useState([]);
@@ -127,16 +130,25 @@ const BuyerDisputes = () => {
         setError(null);
         const response = await api.get('/disputes/my');
 
-        console.group("🏛️ BUYER DISPUTES API VERIFICATION");
-        console.log("Source URL:", '/disputes/my');
-        console.log("HTTP Status:", response.status);
-        console.log("Raw Data:", response.data);
-        console.groupEnd();
-
         // Handle different response formats
         if (response.data.incoming && response.data.outgoing) {
           setIncomingDisputes(response.data.incoming);
           setOutgoingDisputes(response.data.outgoing);
+          
+          // Auto-switch to outgoing tab and highlight if dispute ID in URL
+          if (highlightDisputeId) {
+            const highlighted = response.data.outgoing.find(d => d.id === highlightDisputeId);
+            if (highlighted) {
+              setActiveTab('outgoing');
+              setTimeout(() => {
+                const element = document.getElementById(`dispute-${highlightDisputeId}`);
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  element.classList.add('ring-4', 'ring-green-400');
+                }
+              }, 100);
+            }
+          }
         } else if (Array.isArray(response.data)) {
           setOutgoingDisputes(response.data);
           setIncomingDisputes([]);
@@ -153,7 +165,7 @@ const BuyerDisputes = () => {
     };
 
     fetchDisputes();
-  }, []);
+  }, [highlightDisputeId]);
 
   // Submit response to a dispute
   const handleRespond = async (disputeId, formData) => {
@@ -244,6 +256,7 @@ const BuyerDisputes = () => {
     return (
       <div
         key={dispute.id || dispute.ticket_id}
+        id={`dispute-${dispute.id}`}
         className={`bg-white rounded-xl border-2 overflow-hidden transition-all ${
           responseNeeded ? 'border-red-300 shadow-md' : 'border-slate-200 shadow-sm'
         }`}
@@ -304,11 +317,11 @@ const BuyerDisputes = () => {
                 </p>
               </div>
 
-              {/* Your Response (if submitted) */}
+              {/* Response (if submitted) */}
               {hasResponse && (
                 <div className="bg-green-50 rounded-lg p-4 border border-green-200">
                   <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-1">
-                    ✅ Your Response
+                    {isIncoming ? '✅ Your Response' : '📩 Farmer\'s Response'}
                   </p>
                   <p className="text-sm text-green-800">
                     "{dispute.buyer_response || dispute.farmer_response}"

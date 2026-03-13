@@ -205,6 +205,18 @@ function Navbar() {
                                 // Navigate to order details based on role (case-insensitive)
                                 const dashboardPath = currentUser?.role?.toLowerCase() === 'farmer' ? '/farmer-dashboard' : '/dashboard';
                                 navigate(`${dashboardPath}/orders`);
+                              } else if (notification.type === 'new_dispute' && notification.related_id) {
+                                // Navigate to disputes page based on role
+                                const dashboardPath = currentUser?.role?.toLowerCase() === 'farmer' ? '/farmer-dashboard' : '/dashboard';
+                                navigate(`${dashboardPath}/disputes`);
+                              } else if (notification.type === 'dispute_update' && notification.related_id) {
+                                // Navigate to disputes page with dispute ID highlighted
+                                const dashboardPath = currentUser?.role?.toLowerCase() === 'farmer' ? '/farmer-dashboard' : '/dashboard';
+                                navigate(`${dashboardPath}/disputes?highlight=${notification.related_id}`);
+                              } else if (notification.type === 'dispute_filed') {
+                                // Navigate to disputes page when user files a dispute
+                                const dashboardPath = currentUser?.role?.toLowerCase() === 'farmer' ? '/farmer-dashboard' : '/dashboard';
+                                navigate(`${dashboardPath}/disputes`);
                               }
                             }}
                             className={`p-4 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${

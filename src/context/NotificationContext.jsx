@@ -32,8 +32,13 @@ export const NotificationProvider = ({ children }) => {
       const response = await api.get('/notifications');
       if (response.data.notifications) {
         setNotifications(response.data.notifications);
-        setUnreadCount(response.data.unread_count || 0);
-        prevUnreadCountRef.current = response.data.unread_count || 0;
+        const unreadCount = response.data.unread_count || 0;
+        setUnreadCount(unreadCount);
+        
+        // Set initial count reference on first load
+        if (prevUnreadCountRef.current === 0) {
+          prevUnreadCountRef.current = unreadCount;
+        }
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -44,8 +49,11 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     if (!currentUser) return;
 
-    // Initial fetch
+    // Initial fetch - don't show toasts on first load
     fetchNotifications();
+    
+    // Mark as initialized immediately to prevent toasts on first load
+    initializedRef.current = true;
 
     // Set up polling
     const pollInterval = setInterval(() => {
@@ -61,10 +69,8 @@ export const NotificationProvider = ({ children }) => {
     if (!currentUser) return;
 
     try {
-      console.log('🔔 Fetching unread count for user:', currentUser.email);
       const response = await api.get('/notifications/unread-count');
       const newCount = response.data.unread_count || 0;
-      console.log('🔔 Unread count received:', newCount);
 
       // Show toast if count increased (new notification) and we're past initial load
       if (initializedRef.current && newCount > prevUnreadCountRef.current) {
@@ -140,7 +146,9 @@ export const NotificationProvider = ({ children }) => {
           n.id === notificationId ? { ...n, is_read: true } : n
         )
       );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      const newCount = Math.max(0, unreadCount - 1);
+      setUnreadCount(newCount);
+      prevUnreadCountRef.current = newCount; // Update ref to prevent false positives
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
@@ -154,6 +162,7 @@ export const NotificationProvider = ({ children }) => {
         prev.map((n) => ({ ...n, is_read: true }))
       );
       setUnreadCount(0);
+      prevUnreadCountRef.current = 0; // Update ref to prevent false positives
       toast.success('All notifications marked as read');
     } catch (error) {
       console.error('Failed to mark all as read:', error);
