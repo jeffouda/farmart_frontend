@@ -38,7 +38,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  // Verify token whenever it changes
+  // Verify token on mount only
   useEffect(() => {
     if (!token) return;
 
@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     verifyToken();
-  }, [token]); // <-- run when token changes
+  }, []); // Only run on mount
 
   /**
    * Login user

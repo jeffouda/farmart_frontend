@@ -47,7 +47,14 @@ export const NotificationProvider = ({ children }) => {
 
   // Poll for new notifications every 10 seconds
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      // Reset state when user logs out
+      setNotifications([]);
+      setUnreadCount(0);
+      prevUnreadCountRef.current = 0;
+      initializedRef.current = false;
+      return;
+    }
 
     // Initial fetch - don't show toasts on first load
     fetchNotifications();
@@ -66,7 +73,10 @@ export const NotificationProvider = ({ children }) => {
 
   // Fetch unread count only
   const fetchUnreadCount = async () => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      console.log('⏭️ Skipping notification fetch - user not authenticated');
+      return;
+    }
 
     try {
       const response = await api.get('/notifications/unread-count');
@@ -90,7 +100,10 @@ export const NotificationProvider = ({ children }) => {
       prevUnreadCountRef.current = newCount;
       setUnreadCount(newCount);
     } catch (error) {
-      console.error('Failed to fetch unread count:', error);
+      // Only log error if it's not a 401 (which means user logged out)
+      if (error.response?.status !== 401) {
+        console.error('Failed to fetch unread count:', error);
+      }
     }
   };
 

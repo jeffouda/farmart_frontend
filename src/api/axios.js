@@ -29,10 +29,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Clear all auth data
       localStorage.removeItem("access_token");
-      localStorage.removeItem("user");
+      localStorage.removeItem("currentUser");
 
-      if (!window.location.pathname.includes("/auth")) {
+      // Only redirect if not already on auth page
+      if (!window.location.pathname.includes("/auth") && 
+          !window.location.pathname.includes("/login") &&
+          !window.location.pathname.includes("/signup")) {
+        console.log('🔒 Session expired, redirecting to login');
         window.location.href = "/auth";
       }
     }
