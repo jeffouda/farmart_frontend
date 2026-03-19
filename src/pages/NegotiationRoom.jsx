@@ -25,7 +25,6 @@ const NegotiationRoom = () => {
   const [newMessage, setNewMessage] = useState('');
   
   const messagesEndRef = useRef(null);
-
   // Update sessionId when URL changes
   useEffect(() => {
     const newId = getSessionIdFromUrl();

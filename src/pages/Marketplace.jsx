@@ -14,7 +14,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import LivestockCard from "../components/LivestockCard"; 
 
-const ANIMAL_TYPES = ["Cattle", "Goats", "Sheep", "Chicken", "Pig"];
+const ANIMAL_TYPES = ["Cattle", "Goats", "Sheep", "Chicken", "Pigs"];
 const LOCATIONS = [
   "Nairobi City",
   "Kiambu",
